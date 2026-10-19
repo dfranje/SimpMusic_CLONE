@@ -56,6 +56,7 @@ import com.maxrave.simpmusic.ui.icon.TipsAndUpdates
 import com.maxrave.simpmusic.ui.screen.home.analytics.formatChartDay
 import com.maxrave.simpmusic.ui.theme.LocalIsDarkTheme
 import com.maxrave.simpmusic.ui.theme.typo
+import com.maxrave.simpmusic.ui.theme.xyzRim
 import com.maxrave.simpmusic.viewModel.TasteUiState
 import multiplatform.network.cmptoast.ToastGravity
 import multiplatform.network.cmptoast.showToast
@@ -176,7 +177,11 @@ private fun TasteRowCard(
 ) {
     val container = libraryCardColor()
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .xyzRim(CARD_RADIUS, RoundedCornerShape(CARD_RADIUS))
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         shape = RoundedCornerShape(CARD_RADIUS),
         // Flat, like the collection cards above it on the Your library tab.
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
@@ -266,7 +271,7 @@ private fun TasteReadingCard(
 ) {
     val container = libraryCardColor()
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().xyzRim(CARD_RADIUS, RoundedCornerShape(CARD_RADIUS)),
         shape = RoundedCornerShape(CARD_RADIUS),
         // Flat, like the collection cards above it on the Your library tab.
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),

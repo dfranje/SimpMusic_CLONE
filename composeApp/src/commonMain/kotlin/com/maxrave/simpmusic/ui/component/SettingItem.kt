@@ -34,7 +34,9 @@ import com.maxrave.simpmusic.Platform
 import com.maxrave.simpmusic.extension.greyScale
 import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.ui.theme.LocalIsDarkTheme
+import com.maxrave.simpmusic.ui.theme.LocalXyzPalette
 import com.maxrave.simpmusic.ui.theme.typo
+import com.maxrave.simpmusic.ui.theme.xyzRim
 
 @Composable
 fun SettingItem(
@@ -154,6 +156,9 @@ fun SettingGroup(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val cardColor = settingGroupColor()
+    // The XYZ look draws the group as one of the launcher's cards: its gradient fill and accent rim.
+    val xyz = LocalXyzPalette.current
+    val shape = if (xyz != null) RoundedCornerShape(xyz.corner(SettingGroupCorner)) else SettingGroupShape
     Column(modifier.fillMaxWidth().padding(top = 24.dp)) {
         Text(
             text = title.toUpperCase(Locale.current),
@@ -165,9 +170,11 @@ fun SettingGroup(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clip(SettingGroupShape)
-                    .background(cardColor.copy(alpha = 0.5f))
-                    .drawWithContent {
+                    .xyzRim(xyz?.corner(SettingGroupCorner) ?: SettingGroupCorner, shape)
+                    .clip(shape)
+                    .then(
+                        if (xyz != null) Modifier.background(xyz.cardBrush) else Modifier.background(cardColor.copy(alpha = 0.5f)),
+                    ).drawWithContent {
                         // The first row's hairline would sit on the card's own edge, so that strip is
                         // left undrawn. Clipped rather than painted over: the card is translucent.
                         clipRect(top = SettingDividerThickness.toPx()) { this@drawWithContent.drawContent() }
@@ -193,6 +200,7 @@ private fun settingGroupColor(): Color =
         MaterialTheme.colorScheme.surfaceContainer
     }
 
-private val SettingGroupShape = RoundedCornerShape(20.dp)
+private val SettingGroupCorner = 20.dp
+private val SettingGroupShape = RoundedCornerShape(SettingGroupCorner)
 private val SettingRowPaddingHorizontal = 16.dp
 private val SettingDividerThickness = 0.5.dp

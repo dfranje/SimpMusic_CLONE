@@ -52,6 +52,10 @@
     <queries>
         <package android:name="com.maxrave.simpmusic" />
     </queries>
+    <!-- XYZ Launcher look (Settings > Theme color): read the launcher's palette and day/night -->
+    <queries>
+        <provider android:authorities="xyz.exyu.launcher.theme" />
+    </queries>
     <queries>
         <intent>
             <action android:name="androidx.media3.session.MediaSessionService" />

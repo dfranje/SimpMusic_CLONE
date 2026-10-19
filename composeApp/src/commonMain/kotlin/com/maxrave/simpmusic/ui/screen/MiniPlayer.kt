@@ -137,6 +137,7 @@ import com.maxrave.simpmusic.ui.icon.VolumeUp
 import com.maxrave.simpmusic.ui.screen.player.content.toAudioQualityLabel
 import com.maxrave.simpmusic.ui.theme.LocalIsDarkTheme
 import com.maxrave.simpmusic.ui.theme.typo
+import com.maxrave.simpmusic.ui.theme.xyzRim
 import com.maxrave.simpmusic.viewModel.SharedViewModel
 import com.maxrave.simpmusic.viewModel.UIEvent
 import kotlinx.coroutines.delay
@@ -302,6 +303,9 @@ fun MiniPlayer(
                         Modifier
                             .clip(miniPlayerShape)
                             .offset { IntOffset(0, offsetY.value.roundToInt()) }
+                            // The launcher's accent rim on the flat card in the XYZ look. No glow: the
+                            // card is clipped above, and the rim has to ride along when it is dragged away.
+                            .then(if (isFlat) Modifier.xyzRim(28.dp, miniPlayerShape, glow = false) else Modifier)
                             .clickable(
                                 onClick = onClick,
                             ).pointerInput(Unit) {
@@ -682,7 +686,7 @@ fun MiniPlayer(
                         horizontalPadding = 0.dp,
                         // Dark keeps the familiar seed; light needs the darker seed-derived
                         // primary or the active state washes out on the light glass.
-                        activeColor = if (isDarkTheme) com.maxrave.simpmusic.ui.theme.seed else MaterialTheme.colorScheme.primary,
+                        activeColor = if (isDarkTheme) com.maxrave.simpmusic.ui.theme.appAccent else MaterialTheme.colorScheme.primary,
                         contentColor = textColor,
                     ) {
                         sharedViewModel.onUIEvent(it)

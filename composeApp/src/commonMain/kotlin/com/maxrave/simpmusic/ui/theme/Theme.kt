@@ -13,6 +13,7 @@ import androidx.compose.material3.RippleConfiguration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import com.materialkolor.PaletteStyle
@@ -122,11 +123,14 @@ fun AppTheme(
     themeColorSource: String = DataStoreManager.THEME_COLOR_DEFAULT,
     customThemeColor: Color? = null,
     liquidGlassEnabled: Boolean = true,
+    // The XYZ Launcher look, already resolved (App.kt). When set it decides day/night as well: the
+    // launcher's own while following it, otherwise the one built from [themeMode].
+    xyzPalette: XyzPalette? = null,
     content:
         @Composable()
         () -> Unit,
 ) {
-    val isDark = isDarkTheme(themeMode)
+    val isDark = xyzPalette?.dark ?: isDarkTheme(themeMode)
     val wallpaperScheme =
         if (themeColorSource == DataStoreManager.THEME_COLOR_WALLPAPER) {
             platformDynamicColorScheme(isDark)
@@ -134,32 +138,43 @@ fun AppTheme(
             null
         }
     val seedColor =
-        if (themeColorSource == DataStoreManager.THEME_COLOR_CUSTOM) {
-            customThemeColor ?: seed
-        } else {
-            seed
+        when {
+            xyzPalette != null -> xyzPalette.accent
+            themeColorSource == DataStoreManager.THEME_COLOR_CUSTOM -> customThemeColor ?: seed
+            else -> seed
         }
     // Light pins the neutrals to a neutral-grey ramp (the seed otherwise tints them warm/cream);
-    // dark keeps the generated neutrals as they are.
+    // dark keeps the generated neutrals as they are. The XYZ look then replaces every one of those
+    // neutral roles with the launcher's own surfaces (withXyzPalette).
+    val generatedScheme =
+        rememberDynamicColorScheme(
+            seedColor = seedColor,
+            isDark = isDark,
+            style = PaletteStyle.TonalSpot,
+            modifyColorScheme = { cs -> if (isDark) cs else cs.withNeutralLightSurfaces() },
+        )
     val colorScheme =
-        wallpaperScheme
-            ?: rememberDynamicColorScheme(
-                seedColor = seedColor,
-                isDark = isDark,
-                style = PaletteStyle.TonalSpot,
-                modifyColorScheme = { cs -> if (isDark) cs else cs.withNeutralLightSurfaces() },
-            )
+        if (xyzPalette != null) {
+            remember(generatedScheme, xyzPalette) { generatedScheme.withXyzPalette(xyzPalette) }
+        } else {
+            wallpaperScheme ?: generatedScheme
+        }
     // Immersive screens stay dark even at light theme (see [ForceDarkContent]). Resolve their scheme
-    // once here instead of letting every such subtree build a palette of its own.
+    // once here instead of letting every such subtree build a palette of its own. At day the launcher
+    // only hands over its day palette, so the XYZ night one is built here from the same accent.
+    val xyzDarkPalette = remember(xyzPalette) { xyzPalette?.let { if (it.dark) it else buildXyzPalette(it.accentIndex, dark = true) } }
+    val forcedDarkSeed = xyzDarkPalette?.accent ?: seedColor
     val forcedDarkScheme =
         if (isDark) {
             colorScheme
         } else {
-            rememberDynamicColorScheme(
-                seedColor = seedColor,
-                isDark = true,
-                style = PaletteStyle.TonalSpot,
-            )
+            val generated =
+                rememberDynamicColorScheme(
+                    seedColor = forcedDarkSeed,
+                    isDark = true,
+                    style = PaletteStyle.TonalSpot,
+                )
+            if (xyzDarkPalette != null) remember(generated, xyzDarkPalette) { generated.withXyzPalette(xyzDarkPalette) } else generated
         }
     SystemBarAppearanceEffect(isDark)
     MaterialExpressiveTheme(
@@ -172,6 +187,7 @@ fun AppTheme(
                 LocalIsDarkTheme provides isDark,
                 LocalForcedDarkColorScheme provides forcedDarkScheme,
                 LocalLiquidGlassEnabled provides liquidGlassEnabled,
+                LocalXyzPalette provides xyzPalette,
                 content = content,
             )
         },
@@ -230,6 +246,8 @@ private val SoftRippleConfiguration =
 @Composable
 fun ForceDarkContent(content: @Composable () -> Unit) {
     val darkScheme = LocalForcedDarkColorScheme.current ?: MaterialTheme.colorScheme
+    val xyz = LocalXyzPalette.current
+    val xyzDark = remember(xyz) { xyz?.let { if (it.dark) it else buildXyzPalette(it.accentIndex, dark = true) } }
     MaterialExpressiveTheme(
         colorScheme = darkScheme,
         content = {
@@ -238,6 +256,7 @@ fun ForceDarkContent(content: @Composable () -> Unit) {
                 LocalIsDarkTheme provides true,
                 LocalContentColor provides darkScheme.onSurfaceVariant,
                 LocalAppColors provides DarkAppColors,
+                LocalXyzPalette provides xyzDark,
                 content = content,
             )
         },

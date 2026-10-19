@@ -69,8 +69,10 @@ import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.expect.Orientation
 import com.maxrave.simpmusic.expect.currentOrientation
 import com.maxrave.simpmusic.expect.openUrl
+import com.maxrave.simpmusic.expect.ui.canFollowXyzLauncher
 import com.maxrave.simpmusic.expect.ui.layerBackdrop
 import com.maxrave.simpmusic.expect.ui.rememberBackdrop
+import com.maxrave.simpmusic.expect.ui.rememberXyzLauncherPalette
 import com.maxrave.simpmusic.extension.copy
 import com.maxrave.simpmusic.ui.component.AppBottomNavigationBar
 import com.maxrave.simpmusic.ui.component.AppNavigationRail
@@ -98,12 +100,18 @@ import com.maxrave.simpmusic.ui.screen.player.NowPlayingScreen
 import com.maxrave.simpmusic.ui.screen.player.NowPlayingScreenContent
 import com.maxrave.simpmusic.ui.theme.AppTheme
 import com.maxrave.simpmusic.ui.theme.ForceDarkContent
+import com.maxrave.simpmusic.ui.theme.THEME_COLOR_XYZ
+import com.maxrave.simpmusic.ui.theme.XYZ_ACCENT_FOLLOW
+import com.maxrave.simpmusic.ui.theme.buildXyzPalette
 import com.maxrave.simpmusic.ui.theme.desktopPanelDark
 import com.maxrave.simpmusic.ui.theme.desktopWindowDark
 import com.maxrave.simpmusic.ui.theme.desktopWindowLight
 import com.maxrave.simpmusic.ui.theme.fontFamily
+import com.maxrave.simpmusic.ui.theme.isDarkTheme
 import com.maxrave.simpmusic.ui.theme.parseThemeColorHex
 import com.maxrave.simpmusic.ui.theme.typo
+import com.maxrave.simpmusic.ui.theme.xyzAccentIndex
+import com.maxrave.simpmusic.ui.theme.xyzAccentSettingOrDefault
 import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.simpmusic.utils.isAppLinkAvailable
 import com.maxrave.simpmusic.utils.libraryTabOf
@@ -169,6 +177,17 @@ fun App(
     val themeMode by viewModel.getThemeMode().collectAsStateWithLifecycle(DataStoreManager.THEME_MODE_DARK)
     val themeColorSource by viewModel.getThemeColorSource().collectAsStateWithLifecycle(DataStoreManager.THEME_COLOR_DEFAULT)
     val customThemeColorHex by viewModel.getCustomThemeColor().collectAsStateWithLifecycle(DataStoreManager.DEFAULT_THEME_COLOR_HEX)
+    // The XYZ Launcher look: the launcher's own palette and day/night while following it (Android, with
+    // the launcher installed), otherwise the launcher's formulas on the picked accent and this app's mode.
+    val storedXyzAccent by viewModel.getXyzAccent().collectAsStateWithLifecycle(null)
+    val isXyzTheme = themeColorSource == THEME_COLOR_XYZ
+    val xyzAccent = xyzAccentSettingOrDefault(storedXyzAccent, canFollowXyzLauncher())
+    val launcherPalette = rememberXyzLauncherPalette(enabled = isXyzTheme && xyzAccent == XYZ_ACCENT_FOLLOW)
+    val xyzDarkFromMode = isDarkTheme(themeMode)
+    val xyzPalette =
+        remember(isXyzTheme, launcherPalette, xyzAccent, xyzDarkFromMode) {
+            if (isXyzTheme) launcherPalette ?: buildXyzPalette(xyzAccentIndex(xyzAccent), xyzDarkFromMode) else null
+        }
     val isOfficialBuild by viewModel.isOfficialBuild.collectAsStateWithLifecycle()
     // MiniPlayer visibility: derived, never stored.
     //
@@ -492,6 +511,7 @@ fun App(
         // Desktop is unconditionally true — the liquid-glass setting row is Android-only, and the
         // Desktop capsule player is glass by design. Same rule as MiniPlayer's useGlassSurface.
         liquidGlassEnabled = isLiquidGlassEnabled == TRUE || getPlatform() == Platform.Desktop,
+        xyzPalette = xyzPalette,
     ) {
         if (!isOfficialBuild) {
             UnofficialBuildScreen()
@@ -503,9 +523,20 @@ fun App(
         // The desktop shell is a window colour with panels floating on it. The two schemes mirror
         // each other: the window takes the extreme (pure black / pure white) and the panel steps
         // one shade back towards the middle, so the panels read as raised either way.
-        val desktopWindow = if (isLightScheme) desktopWindowLight else desktopWindowDark
+        // The XYZ look keeps the same layering in the launcher's own tones: the window takes the
+        // darkest end of its gradient, the panel the page.
+        val desktopWindow =
+            when {
+                xyzPalette != null -> xyzPalette.bgBottom
+                isLightScheme -> desktopWindowLight
+                else -> desktopWindowDark
+            }
         val desktopPanel =
-            if (isLightScheme) MaterialTheme.colorScheme.surfaceContainer else desktopPanelDark
+            when {
+                xyzPalette != null -> MaterialTheme.colorScheme.background
+                isLightScheme -> MaterialTheme.colorScheme.surfaceContainer
+                else -> desktopPanelDark
+            }
 
         // Backdrop base must match the page, so glass over an empty area reads as the page itself.
         // On Desktop the page is the panel: its colour is painted outside the recorded layer, and

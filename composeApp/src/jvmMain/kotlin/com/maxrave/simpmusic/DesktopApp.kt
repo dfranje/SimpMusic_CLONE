@@ -41,7 +41,11 @@ import com.maxrave.simpmusic.extension.DesktopWindowChrome
 import com.maxrave.simpmusic.ui.component.CustomTitleBar
 import com.maxrave.simpmusic.ui.mini_player.MiniPlayerManager
 import com.maxrave.simpmusic.ui.mini_player.MiniPlayerWindow
+import com.maxrave.simpmusic.ui.theme.THEME_COLOR_XYZ
+import com.maxrave.simpmusic.ui.theme.buildXyzPalette
 import com.maxrave.simpmusic.ui.theme.isDarkTheme
+import com.maxrave.simpmusic.ui.theme.xyzAccentIndex
+import com.maxrave.simpmusic.ui.theme.xyzAccentSettingOrDefault
 import com.maxrave.simpmusic.utils.ComposeResUtils
 import com.maxrave.simpmusic.utils.NetworkFirstInterceptor
 import com.maxrave.simpmusic.utils.VersionManager
@@ -459,6 +463,18 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
                         .getThemeMode()
                         .collectAsState(DataStoreManager.THEME_MODE_DARK)
                     val isDark = isDarkTheme(themeMode)
+                    // The XYZ look paints the window in the launcher's darkest tone instead (App.kt).
+                    val themeColorSource by sharedViewModel
+                        .getThemeColorSource()
+                        .collectAsState(DataStoreManager.THEME_COLOR_DEFAULT)
+                    val storedXyzAccent by sharedViewModel.getXyzAccent().collectAsState(null)
+                    val xyzWindow =
+                        if (themeColorSource == THEME_COLOR_XYZ) {
+                            val index = xyzAccentIndex(xyzAccentSettingOrDefault(storedXyzAccent, canFollowLauncher = false))
+                            buildXyzPalette(index, isDark).let { it.bgBottom to it.text }
+                        } else {
+                            null
+                        }
                     CustomTitleBar(
                         title = stringResource(Res.string.app_name),
                         windowState = windowState,
@@ -466,8 +482,8 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
                         onCloseRequest = {
                             isVisible = false
                         },
-                        containerColor = if (isDark) Color.Black else Color.White,
-                        titleColor = if (isDark) Color.White else Color.Black,
+                        containerColor = xyzWindow?.first ?: if (isDark) Color.Black else Color.White,
+                        titleColor = xyzWindow?.second ?: if (isDark) Color.White else Color.Black,
                     )
                 }
 

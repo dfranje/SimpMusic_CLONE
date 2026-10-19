@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.maxrave.domain.data.model.analytics.AnalyticsPeriodStats
 import com.maxrave.domain.data.model.analytics.ListeningFingerprint
-import com.maxrave.simpmusic.ui.theme.seed
+import com.maxrave.simpmusic.ui.theme.appAccent
 import com.maxrave.simpmusic.ui.theme.typo
 import org.jetbrains.compose.resources.stringResource
 import simpmusic.composeapp.generated.resources.Res
@@ -152,6 +152,8 @@ fun FingerprintChart(
         )
     val grid = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.18f)
     val prevColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+    // Read here: the Canvas below draws outside composition.
+    val accent = appAccent
 
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
         Canvas(Modifier.size(diameter)) {
@@ -165,8 +167,8 @@ fun FingerprintChart(
                 drawPath(valuePath(center, radius, it.axes), prevColor, style = Stroke(1.5f))
             }
             val now = valuePath(center, radius, current.axes)
-            drawPath(now, seed.copy(alpha = 0.22f))
-            drawPath(now, seed, style = Stroke(2f))
+            drawPath(now, accent.copy(alpha = 0.22f))
+            drawPath(now, accent, style = Stroke(2f))
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             labels.forEachIndexed { i, label ->
@@ -185,7 +187,7 @@ fun FingerprintChart(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                LegendDot(seed, stringResource(Res.string.analytics_this_period))
+                LegendDot(accent, stringResource(Res.string.analytics_this_period))
                 if (previous != null) LegendDot(prevColor, stringResource(Res.string.analytics_previous_period))
             }
         }
@@ -364,7 +366,7 @@ fun DecadeChart(
                             .fillMaxWidth((row.plays.toFloat() / max).coerceIn(0.02f, 1f))
                             .height(16.dp)
                             .clip(CircleShape)
-                            .background(if (row.plays == max) seed else seed.copy(alpha = 0.45f)),
+                            .background(if (row.plays == max) appAccent else appAccent.copy(alpha = 0.45f)),
                     )
                 }
                 Text(

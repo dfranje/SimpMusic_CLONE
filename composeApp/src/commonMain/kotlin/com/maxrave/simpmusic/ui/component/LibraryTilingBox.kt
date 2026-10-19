@@ -43,6 +43,7 @@ import com.maxrave.simpmusic.ui.component.taste.libraryCardColor
 import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDynamicPlaylistDestination
 import com.maxrave.simpmusic.ui.screen.library.LibraryDynamicPlaylistType
 import com.maxrave.simpmusic.ui.theme.typo
+import com.maxrave.simpmusic.ui.theme.xyzRim
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -143,7 +144,7 @@ private fun FavoriteCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().height(132.dp),
+        modifier = Modifier.fillMaxWidth().height(132.dp).xyzRim(CardCorner, CardShape),
         shape = CardShape,
         colors = CardDefaults.cardColors(containerColor = container),
     ) {
@@ -199,7 +200,7 @@ private fun CollectionCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.height(118.dp),
+        modifier = modifier.height(118.dp).xyzRim(CardCorner, CardShape),
         shape = CardShape,
         colors = CardDefaults.cardColors(containerColor = container),
     ) {
@@ -313,4 +314,6 @@ private fun EmptySleeve(
     )
 }
 
-private val CardShape = RoundedCornerShape(20.dp)
+// The XYZ look adds the launcher's accent rim around each card (xyzRim; nothing outside that look).
+private val CardCorner = 20.dp
+private val CardShape = RoundedCornerShape(CardCorner)

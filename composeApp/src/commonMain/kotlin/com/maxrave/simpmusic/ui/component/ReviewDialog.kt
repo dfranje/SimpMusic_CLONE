@@ -18,7 +18,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.window.DialogProperties
 import com.maxrave.simpmusic.expect.openUrl
-import com.maxrave.simpmusic.ui.theme.seed
+import com.maxrave.simpmusic.ui.theme.appAccent
 import com.maxrave.simpmusic.ui.theme.typo
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -78,7 +78,7 @@ fun ReviewDialog(
                         withLink(
                             LinkAnnotation.Url(
                                 "https://www.producthunt.com/products/simpmusic",
-                                TextLinkStyles(style = SpanStyle(textDecoration = TextDecoration.Underline, color = seed)),
+                                TextLinkStyles(style = SpanStyle(textDecoration = TextDecoration.Underline, color = appAccent)),
                             ) {
                                 onDoneReview.invoke()
                                 onDismissRequest.invoke()
@@ -94,7 +94,7 @@ fun ReviewDialog(
                         withLink(
                             LinkAnnotation.Url(
                                 "https://buymeacoffee.com/maxrave",
-                                TextLinkStyles(style = SpanStyle(textDecoration = TextDecoration.Underline, color = seed)),
+                                TextLinkStyles(style = SpanStyle(textDecoration = TextDecoration.Underline, color = appAccent)),
                             ) {
                                 onDoneReview.invoke()
                                 onDismissRequest.invoke()
@@ -107,7 +107,7 @@ fun ReviewDialog(
                         withLink(
                             LinkAnnotation.Url(
                                 "https://x.com/maxrave_dev",
-                                TextLinkStyles(style = SpanStyle(textDecoration = TextDecoration.Underline, color = seed)),
+                                TextLinkStyles(style = SpanStyle(textDecoration = TextDecoration.Underline, color = appAccent)),
                             ) {
                                 onDoneReview.invoke()
                                 onDismissRequest.invoke()

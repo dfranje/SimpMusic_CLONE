@@ -161,7 +161,7 @@ import com.maxrave.simpmusic.ui.icon.SimpIcons
 import com.maxrave.simpmusic.ui.icon.Sort
 import com.maxrave.simpmusic.ui.icon.TipsAndUpdates
 import com.maxrave.simpmusic.ui.theme.LocalIsDarkTheme
-import com.maxrave.simpmusic.ui.theme.seed
+import com.maxrave.simpmusic.ui.theme.appAccent
 import com.maxrave.simpmusic.ui.theme.typo
 import com.maxrave.simpmusic.viewModel.LocalPlaylistUIEvent
 import com.maxrave.simpmusic.viewModel.LocalPlaylistViewModel
@@ -768,7 +768,7 @@ fun LocalPlaylistScreen(
                                                 text = stringResource(Res.string.your_playlist),
                                                 style = typo().titleMedium,
                                                 // The app accent, standing in for the brand red Apple uses here.
-                                                color = seed,
+                                                color = appAccent,
                                             )
                                             Spacer(modifier = Modifier.height(6.dp))
                                             Text(

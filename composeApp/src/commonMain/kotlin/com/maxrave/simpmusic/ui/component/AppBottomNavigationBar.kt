@@ -9,6 +9,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -29,6 +32,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -44,7 +49,10 @@ import com.maxrave.simpmusic.ui.navigation.destination.home.HomeDestination
 import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDestination
 import com.maxrave.simpmusic.ui.navigation.destination.library.MixForYouDestination
 import com.maxrave.simpmusic.ui.navigation.destination.search.SearchDestination
+import com.maxrave.simpmusic.ui.theme.LocalXyzPalette
+import com.maxrave.simpmusic.ui.theme.XyzPalette
 import com.maxrave.simpmusic.ui.theme.typo
+import com.maxrave.simpmusic.ui.theme.xyzRim
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import simpmusic.composeapp.generated.resources.*
@@ -169,8 +177,11 @@ internal fun FlatTabBar(
     modifier: Modifier = Modifier,
     collapsedContent: (@Composable () -> Unit)? = null,
 ) {
+    // The XYZ look draws the launcher's bar: its card fill and rim, the selected tab filled with the accent.
+    val xyz = LocalXyzPalette.current
     val capsuleColor = MaterialTheme.colorScheme.surfaceContainer
-    val indicatorColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val indicatorColor = xyz?.accent ?: MaterialTheme.colorScheme.surfaceContainerHighest
+    val selectedContentColor = if (xyz != null) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
     val tabWidth = flatTabWidth(tabs.size, availableWidth)
     val fullWidth = tabWidth * tabs.size + CapsuleInset * 2
     val selectedPosition = tabs.indexOfFirst { it.ordinal == selectedIndex }
@@ -190,9 +201,10 @@ internal fun FlatTabBar(
             modifier
                 .height(FlatBarHeight)
                 .width(fullWidth)
+                .xyzRim(FlatBarHeight / 2, RoundedCornerShape(FlatBarHeight / 2))
                 // Also what cuts the full-width tabs down to the surface while the bar is folding.
                 .clip(RoundedCornerShape(FlatBarHeight / 2))
-                .background(capsuleColor),
+                .then(if (xyz != null) Modifier.background(xyz.cardBrush) else Modifier.background(capsuleColor)),
         contentAlignment = Alignment.CenterStart,
     ) {
         Box(Modifier.matchParentSize().unfoldingTabs(fullWidth, clipShape = null)) {
@@ -241,7 +253,7 @@ internal fun FlatTabBar(
                         val selected = position == activePosition
                         val contentColor =
                             if (selected) {
-                                MaterialTheme.colorScheme.primary
+                                selectedContentColor
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             }
@@ -284,26 +296,28 @@ internal fun FlatSearchButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val xyz = LocalXyzPalette.current
     Box(
         modifier =
             modifier
                 .size(FlatIndicatorHeight)
+                .xyzRim(FlatIndicatorHeight / 2, CircleShape)
                 .clip(CircleShape)
                 .background(
-                    if (selected) {
-                        MaterialTheme.colorScheme.surfaceContainerHighest
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainer
+                    when {
+                        selected && xyz != null -> xyz.accent
+                        selected -> MaterialTheme.colorScheme.surfaceContainerHighest
+                        else -> MaterialTheme.colorScheme.surfaceContainer
                     },
                 ).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         CompositionLocalProvider(
             LocalContentColor provides
-                if (selected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                when {
+                    selected && xyz != null -> MaterialTheme.colorScheme.onPrimary
+                    selected -> MaterialTheme.colorScheme.primary
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
                 },
         ) {
             BottomNavScreen.Search.icon()
@@ -428,6 +442,39 @@ fun AppNavigationRail(
             selectedIndex = BottomNavScreen.Home.ordinal
         }
     }
+    val onSelect: (BottomNavScreen) -> Unit = { screen ->
+        if (selectedIndex == screen.ordinal) {
+            if (currentBackStackEntry?.destination?.hierarchy?.any {
+                    it.hasRoute(screen.destination::class)
+                } == true
+            ) {
+                reloadDestinationIfNeeded(
+                    screen.destination::class,
+                )
+            } else {
+                navController.navigate(screen.destination)
+            }
+        } else {
+            selectedIndex = screen.ordinal
+            navController.navigate(screen.destination) {
+                popUpTo(navController.graph.startDestinationId) {
+                    saveState = true
+                }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    }
+    val xyzPalette = LocalXyzPalette.current
+    if (xyzPalette != null) {
+        XyzNavigationRail(
+            palette = xyzPalette,
+            screens = bottomNavScreens,
+            selectedIndex = selectedIndex,
+            onSelect = onSelect,
+        )
+        return
+    }
     // Transparent, not the default `surface`: the rail sits on the Desktop window (pure black/white)
     // and on the page background on tablets, and must read as part of whatever is behind it.
     NavigationRail(containerColor = Color.Transparent) {
@@ -466,31 +513,98 @@ fun AppNavigationRail(
                     )
                 },
                 selected = selectedIndex == screen.ordinal,
-                onClick = {
-                    if (selectedIndex == screen.ordinal) {
-                        if (currentBackStackEntry?.destination?.hierarchy?.any {
-                                it.hasRoute(screen.destination::class)
-                            } == true
-                        ) {
-                            reloadDestinationIfNeeded(
-                                screen.destination::class,
-                            )
-                        } else {
-                            navController.navigate(screen.destination)
-                        }
-                    } else {
-                        selectedIndex = screen.ordinal
-                        navController.navigate(screen.destination) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                },
+                onClick = { onSelect(screen) },
             )
         }
         Spacer(Modifier.height(32.dp))
     }
 }
+
+/**
+ * The rail in the XYZ Launcher look, drawn like the launcher's own (XYZ Glazba's side bar): one
+ * rounded card with the accent rim, the tabs at the top and the selected one filled with the accent.
+ * On a 1024×600 head unit this is the app's whole navigation, so it is what places SimpMusic in the
+ * launcher's family at a glance.
+ */
+@Composable
+private fun XyzNavigationRail(
+    palette: XyzPalette,
+    screens: List<BottomNavScreen>,
+    selectedIndex: Int,
+    onSelect: (BottomNavScreen) -> Unit,
+) {
+    val corner = palette.corner(28.dp)
+    val shape = RoundedCornerShape(corner)
+    val itemShape = RoundedCornerShape(palette.corner(16.dp))
+    Column(
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .windowInsetsPadding(NavigationRailDefaults.windowInsets)
+                .padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 4.dp)
+                .width(XyzRailWidth)
+                .xyzRim(corner, shape)
+                .clip(shape)
+                .background(palette.cardBrush),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(Modifier.height(16.dp))
+        Box(
+            Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(palette.tile),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(Res.drawable.mono),
+                contentDescription = null,
+                modifier =
+                    Modifier
+                        .height(32.dp)
+                        .clip(CircleShape),
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        // Scrolls only where the height runs out (a phone on its side); a head unit fits all tabs.
+        Column(
+            modifier =
+                Modifier
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            screens.forEach { screen ->
+                val selected = selectedIndex == screen.ordinal
+                val iconColor = if (selected) MaterialTheme.colorScheme.onPrimary else palette.text
+                val labelColor = if (selected) MaterialTheme.colorScheme.onPrimary else palette.textDim
+                Column(
+                    modifier =
+                        Modifier
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .fillMaxWidth()
+                            .clip(itemShape)
+                            .background(if (selected) palette.accent else Color.Transparent)
+                            .selectable(selected = selected, role = Role.Tab) { onSelect(screen) }
+                            .padding(vertical = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    CompositionLocalProvider(LocalContentColor provides iconColor) {
+                        screen.icon()
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(screen.title),
+                        style = typo().bodySmall,
+                        color = labelColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+    }
+}
+
+private val XyzRailWidth = 88.dp

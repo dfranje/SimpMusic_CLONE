@@ -68,7 +68,7 @@ import com.maxrave.simpmusic.ui.component.QrScanner
 import com.maxrave.simpmusic.ui.component.rememberSurfaceDarkColors
 import com.maxrave.simpmusic.ui.icon.Close
 import com.maxrave.simpmusic.ui.icon.SimpIcons
-import com.maxrave.simpmusic.ui.theme.seed
+import com.maxrave.simpmusic.ui.theme.appAccent
 import com.maxrave.simpmusic.ui.theme.typo
 import com.maxrave.simpmusic.viewModel.LoginSyncSenderViewModel
 import com.maxrave.simpmusic.viewModel.LoginSyncSenderViewModel.Step
@@ -357,7 +357,7 @@ private fun Status(
 }
 
 /**
- * The app's sheet button (ModalBottomSheet.kt's sleep timer "Set"): seed fill, 12dp corners. The text
+ * The app's sheet button (ModalBottomSheet.kt's sleep timer "Set"): accent fill, 12dp corners. The text
  * colour is set explicitly because typo() bakes a body colour into every style — a stock M3 Button
  * inherits that instead of onPrimary and renders pale text on a pale fill.
  */
@@ -370,7 +370,7 @@ private fun SheetButton(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = seed),
+        colors = ButtonDefaults.buttonColors(containerColor = appAccent),
     ) {
         Text(
             text = text,

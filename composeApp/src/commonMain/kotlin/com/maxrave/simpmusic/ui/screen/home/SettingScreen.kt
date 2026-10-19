@@ -111,6 +111,7 @@ import com.maxrave.domain.utils.LocalResource
 import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.Platform
 import com.maxrave.simpmusic.expect.ui.LoginSyncDialog
+import com.maxrave.simpmusic.expect.ui.canFollowXyzLauncher
 import com.maxrave.simpmusic.expect.ui.filePickerResult
 import com.maxrave.simpmusic.expect.ui.fileSaverResult
 import com.maxrave.simpmusic.expect.ui.isLyricsBlurSupported
@@ -143,9 +144,15 @@ import com.maxrave.simpmusic.ui.navigation.destination.login.DiscordLoginDestina
 import com.maxrave.simpmusic.ui.navigation.destination.login.LastfmLoginDestination
 import com.maxrave.simpmusic.ui.navigation.destination.login.LoginDestination
 import com.maxrave.simpmusic.ui.navigation.destination.login.SpotifyLoginDestination
+import com.maxrave.simpmusic.ui.theme.LocalXyzPalette
+import com.maxrave.simpmusic.ui.theme.THEME_COLOR_XYZ
+import com.maxrave.simpmusic.ui.theme.XYZ_ACCENT_FOLLOW
+import com.maxrave.simpmusic.ui.theme.XyzAccents
 import com.maxrave.simpmusic.ui.theme.md_theme_dark_primary
 import com.maxrave.simpmusic.ui.theme.parseThemeColorHex
 import com.maxrave.simpmusic.ui.theme.typo
+import com.maxrave.simpmusic.ui.theme.xyzAccentIndex
+import com.maxrave.simpmusic.ui.theme.xyzAccentSettingOrDefault
 import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.simpmusic.viewModel.ImportViewModel
 import com.maxrave.simpmusic.viewModel.SettingAlertState
@@ -422,6 +429,11 @@ import simpmusic.composeapp.generated.resources.sync_follow_to_youtube_descripti
 import simpmusic.composeapp.generated.resources.theme
 import simpmusic.composeapp.generated.resources.theme_color
 import simpmusic.composeapp.generated.resources.theme_color_custom
+import simpmusic.composeapp.generated.resources.theme_color_xyz
+import simpmusic.composeapp.generated.resources.theme_follows_xyz_launcher
+import simpmusic.composeapp.generated.resources.xyz_accent
+import simpmusic.composeapp.generated.resources.xyz_accent_follow
+import simpmusic.composeapp.generated.resources.xyz_launcher_not_found
 import simpmusic.composeapp.generated.resources.theme_color_default
 import simpmusic.composeapp.generated.resources.theme_color_wallpaper
 import simpmusic.composeapp.generated.resources.theme_mode_dark
@@ -580,6 +592,12 @@ fun SettingScreen(
     val themeMode by sharedViewModel.getThemeMode().collectAsStateWithLifecycle(DataStoreManager.THEME_MODE_DARK)
     val themeColorSource by sharedViewModel.getThemeColorSource().collectAsStateWithLifecycle(DataStoreManager.THEME_COLOR_DEFAULT)
     val customThemeColorHex by sharedViewModel.getCustomThemeColor().collectAsStateWithLifecycle(DataStoreManager.DEFAULT_THEME_COLOR_HEX)
+    val storedXyzAccent by sharedViewModel.getXyzAccent().collectAsStateWithLifecycle(null)
+    val xyzAccent = xyzAccentSettingOrDefault(storedXyzAccent, canFollowXyzLauncher())
+    // Provided by AppTheme: tells whether the launcher actually answered, i.e. whether day/night is its call.
+    val xyzPalette = LocalXyzPalette.current
+    val followsLauncherDayNight =
+        themeColorSource == THEME_COLOR_XYZ && xyzAccent == XYZ_ACCENT_FOLLOW && xyzPalette?.fromLauncher == true
     val nowPlayingStyle by sharedViewModel.getNowPlayingStyle().collectAsStateWithLifecycle(DataStoreManager.NOW_PLAYING_STYLE_SPOTIFY)
     val lyricsStyle by sharedViewModel.getLyricsStyle().collectAsStateWithLifecycle(DataStoreManager.LYRICS_STYLE_CLASSIC)
     val romanizationStored by sharedViewModel.getRomanizationLanguages().collectAsStateWithLifecycle("")
@@ -733,7 +751,15 @@ fun SettingScreen(
                         )
                     SettingItem(
                         title = stringResource(Res.string.theme),
-                        subtitle = themeModeLabels.firstOrNull { it.first == themeMode }?.second ?: "",
+                        subtitle =
+                            if (followsLauncherDayNight) {
+                                stringResource(Res.string.theme_follows_xyz_launcher)
+                            } else {
+                                themeModeLabels.firstOrNull { it.first == themeMode }?.second ?: ""
+                            },
+                        // The launcher switches day and night itself (its own setting, or sunset); the
+                        // stored mode comes back the moment the XYZ look stops following it.
+                        isEnable = !followsLauncherDayNight,
                         onClick = {
                             viewModel.setAlertData(
                                 SettingAlertState(
@@ -905,6 +931,7 @@ fun SettingScreen(
                     )
                     val colorSourceLabels =
                         buildList {
+                            add(THEME_COLOR_XYZ to stringResource(Res.string.theme_color_xyz))
                             add(DataStoreManager.THEME_COLOR_DEFAULT to stringResource(Res.string.theme_color_default))
                             if (isWallpaperDynamicColorSupported()) {
                                 add(DataStoreManager.THEME_COLOR_WALLPAPER to stringResource(Res.string.theme_color_wallpaper))
@@ -937,6 +964,45 @@ fun SettingScreen(
                             )
                         },
                     )
+                    if (themeColorSource == THEME_COLOR_XYZ) {
+                        val accentLabels =
+                            buildList {
+                                if (canFollowXyzLauncher()) add(XYZ_ACCENT_FOLLOW to stringResource(Res.string.xyz_accent_follow))
+                                XyzAccents.forEachIndexed { index, accent -> add(index.toString() to stringResource(accent.name)) }
+                            }
+                        val fallbackAccentName = stringResource(XyzAccents[xyzAccentIndex(xyzAccent)].name)
+                        SettingItem(
+                            title = stringResource(Res.string.xyz_accent),
+                            subtitle =
+                                when {
+                                    xyzAccent != XYZ_ACCENT_FOLLOW -> accentLabels.firstOrNull { it.first == xyzAccent }?.second ?: ""
+                                    xyzPalette != null && xyzPalette.fromLauncher ->
+                                        stringResource(Res.string.xyz_accent_follow) + " · " +
+                                            stringResource(XyzAccents[xyzPalette.accentIndex].name)
+                                    else -> stringResource(Res.string.xyz_launcher_not_found, fallbackAccentName)
+                                },
+                            smallSubtitle = true,
+                            onClick = {
+                                viewModel.setAlertData(
+                                    SettingAlertState(
+                                        title = runBlocking { getString(Res.string.xyz_accent) },
+                                        selectOne =
+                                            SettingAlertState.SelectData(
+                                                listSelect = accentLabels.map { (it.first == xyzAccent) to it.second },
+                                            ),
+                                        confirm =
+                                            runBlocking { getString(Res.string.change) } to { state ->
+                                                val selected = state.selectOne?.getSelected()
+                                                accentLabels.firstOrNull { it.second == selected }?.first?.let {
+                                                    sharedViewModel.setXyzAccent(it)
+                                                }
+                                            },
+                                        dismiss = runBlocking { getString(Res.string.cancel) },
+                                    ),
+                                )
+                            },
+                        )
+                    }
                     if (themeColorSource == DataStoreManager.THEME_COLOR_CUSTOM) {
                         SettingItem(
                             title = stringResource(Res.string.custom_color),

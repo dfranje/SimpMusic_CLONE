@@ -33,7 +33,7 @@ import com.maxrave.simpmusic.ui.icon.Shuffle
 import com.maxrave.simpmusic.ui.icon.SimpIcons
 import com.maxrave.simpmusic.ui.icon.SkipNext
 import com.maxrave.simpmusic.ui.icon.SkipPrevious
-import com.maxrave.simpmusic.ui.theme.seed
+import com.maxrave.simpmusic.ui.theme.appAccent
 import com.maxrave.simpmusic.viewModel.UIEvent
 
 @Composable
@@ -47,9 +47,9 @@ fun PlayerControlLayout(
     // read as a hole at both ends of the transport cluster.
     horizontalPadding: Dp = 20.dp,
     // Tint for the ACTIVE shuffle/repeat state. The default keeps the raw seed (#8ECAE6) every
-    // existing call site had; the capsule passes a theme-aware colour because pastel seed on a
-    // light glass surface is nearly invisible.
-    activeColor: Color = seed,
+    // existing call site had, or the launcher accent in the XYZ look (appAccent); the capsule passes
+    // a theme-aware colour because pastel seed on a light glass surface is nearly invisible.
+    activeColor: Color = appAccent,
     contentColor: Color = Color.White,
     onUIEvent: (UIEvent) -> Unit,
 ) = LeftToRight {

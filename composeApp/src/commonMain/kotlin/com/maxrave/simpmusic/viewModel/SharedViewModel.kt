@@ -75,6 +75,9 @@ import com.maxrave.simpmusic.expect.getDownloadFolderPath
 import com.maxrave.simpmusic.expect.isOnUnmeteredNetwork
 import com.maxrave.simpmusic.expect.ui.toByteArray
 import com.maxrave.simpmusic.getPlatform
+import com.maxrave.simpmusic.ui.theme.THEME_COLOR_XYZ
+import com.maxrave.simpmusic.ui.theme.XYZ_ACCENT_KEY
+import com.maxrave.simpmusic.ui.theme.XYZ_THEME_ADOPTED_KEY
 import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.simpmusic.utils.decodePromos
 import com.maxrave.simpmusic.utils.shownPromoIds
@@ -294,6 +297,7 @@ class SharedViewModel(
                 )
             }
             dataStoreManager.openApp()
+            launch { adoptXyzThemeOnce() }
             val timeLineJob =
                 launch {
                     nowPlayingState
@@ -2056,6 +2060,28 @@ class SharedViewModel(
         viewModelScope.launch {
             dataStoreManager.setCustomThemeColor(argbHex)
         }
+    }
+
+    /** The XYZ look's accent as stored: "follow", an index into XyzAccents, or null for the default. */
+    fun getXyzAccent() = dataStoreManager.getString(XYZ_ACCENT_KEY)
+
+    fun setXyzAccent(setting: String) {
+        viewModelScope.launch {
+            dataStoreManager.putString(XYZ_ACCENT_KEY, setting)
+        }
+    }
+
+    /**
+     * This fork's out-of-the-box look is the XYZ Launcher's. Moves an install onto it once, and only if
+     * nothing was picked yet (still Default): a Wallpaper or Custom choice stays, and switching back to
+     * Default afterwards is never undone.
+     */
+    private suspend fun adoptXyzThemeOnce() {
+        if (dataStoreManager.getString(XYZ_THEME_ADOPTED_KEY).first() != null) return
+        if (dataStoreManager.themeColorSource.first() == DataStoreManager.THEME_COLOR_DEFAULT) {
+            dataStoreManager.setThemeColorSource(THEME_COLOR_XYZ)
+        }
+        dataStoreManager.putString(XYZ_THEME_ADOPTED_KEY, TRUE)
     }
 
     fun setNowPlayingStyle(style: String) {

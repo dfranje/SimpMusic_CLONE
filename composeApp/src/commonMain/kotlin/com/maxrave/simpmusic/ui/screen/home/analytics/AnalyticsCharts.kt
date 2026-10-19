@@ -259,6 +259,8 @@ fun ListeningClockChart(
     val peak = hours.indices.maxByOrNull { hours[it] } ?: 0
     val max = hours.maxOrNull()?.coerceAtLeast(1) ?: 1
     val track = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f)
+    // Read here: the Canvas below draws outside composition.
+    val accent = appAccent
 
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
         Canvas(Modifier.size(diameter)) {
@@ -273,7 +275,7 @@ fun ListeningClockChart(
                     val valueOuter = inner + (outer - inner) * (count.toFloat() / max)
                     drawWedge(
                         center, inner, valueOuter, start, sweep,
-                        if (count > max * 0.55f) seed else seed.copy(alpha = 0.45f),
+                        if (count > max * 0.55f) accent else accent.copy(alpha = 0.45f),
                     )
                 }
             }

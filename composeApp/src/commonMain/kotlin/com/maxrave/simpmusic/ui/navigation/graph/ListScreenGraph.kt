@@ -21,7 +21,9 @@ import com.maxrave.simpmusic.ui.screen.other.BrowseScreen
 import com.maxrave.simpmusic.ui.screen.other.MoreAlbumsScreen
 import com.maxrave.simpmusic.ui.screen.other.PlaylistScreen
 import com.maxrave.simpmusic.ui.screen.other.PodcastScreen
+import com.maxrave.simpmusic.ui.screen.xyz.XyzArtistScreen
 import com.maxrave.simpmusic.ui.theme.ForceDarkContent
+import com.maxrave.simpmusic.ui.theme.LocalXyzPalette
 
 @ExperimentalMaterial3Api
 @ExperimentalFoundationApi
@@ -40,11 +42,19 @@ fun NavGraphBuilder.listScreenGraph(
     }
     composable<ArtistDestination> { entry ->
         val data = entry.toRoute<ArtistDestination>()
-        ForceDarkContent {
-            ArtistScreen(
+        if (LocalXyzPalette.current != null) {
+            XyzArtistScreen(
                 channelId = data.channelId,
                 navController = navController,
+                innerPadding = innerPadding,
             )
+        } else {
+            ForceDarkContent {
+                ArtistScreen(
+                    channelId = data.channelId,
+                    navController = navController,
+                )
+            }
         }
     }
     composable<LocalPlaylistDestination> { entry ->

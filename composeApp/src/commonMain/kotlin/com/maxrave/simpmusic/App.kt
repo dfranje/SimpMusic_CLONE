@@ -100,9 +100,7 @@ import com.maxrave.simpmusic.ui.screen.other.UnofficialBuildScreen
 import com.maxrave.simpmusic.ui.screen.player.NowPlayingScreen
 import com.maxrave.simpmusic.ui.screen.player.NowPlayingScreenContent
 import com.maxrave.simpmusic.ui.screen.xyz.XyzBottomBar
-import com.maxrave.simpmusic.ui.screen.xyz.XyzMiniBar
 import com.maxrave.simpmusic.ui.screen.xyz.XyzSideBar
-import com.maxrave.simpmusic.ui.screen.xyz.isXyzHome
 import com.maxrave.simpmusic.ui.screen.xyz.navigateXyzPage
 import com.maxrave.simpmusic.ui.theme.AppTheme
 import com.maxrave.simpmusic.viewModel.base.UserPlaybackStarts
@@ -462,14 +460,13 @@ fun App(
     }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val onXyzHome = navBackStackEntry?.destination.isXyzHome()
-    // Everything that used to raise the Now Playing sheet opens Home instead: in the XYZ shell, Home
-    // is the player, and there are no lyrics or player styles for the sheet to offer.
     // Picking a song anywhere lands on the player, which in this shell is Home.
     LaunchedEffect(isXyzShell) {
         if (!isXyzShell) return@LaunchedEffect
         UserPlaybackStarts.events.collect { navController.navigateXyzPage(HomeDestination) }
     }
+    // Everything that used to raise the Now Playing sheet opens Home instead: in the XYZ shell, Home
+    // is the player, and there are no lyrics or player styles for the sheet to offer.
     LaunchedEffect(isShowNowPlaylistScreen, isXyzShell) {
         if (isXyzShell && isShowNowPlaylistScreen) {
             isShowNowPlaylistScreen = false
@@ -589,15 +586,7 @@ fun App(
                         enter = fadeIn(),
                         exit = fadeOut(),
                     ) {
-                        Column {
-                            if (isShowMiniPlayer && !onXyzHome) {
-                                XyzMiniBar(
-                                    onOpenPlayer = { navController.navigateXyzPage(HomeDestination) },
-                                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 4.dp),
-                                )
-                            }
-                            XyzBottomBar(navController)
-                        }
+                        XyzBottomBar(navController)
                     }
                 } else if (!isTablet) {
                     AnimatedVisibility(
@@ -732,12 +721,7 @@ fun App(
                                     LocalUserStarted provides userStarted,
                                 ) {
                                     AppNavigationGraph(
-                                        innerPadding =
-                                            if (isXyzShell && isTablet && isShowMiniPlayer && !onXyzHome) {
-                                                innerPadding.copy(bottom = innerPadding.calculateBottomPadding() + XyzTabletMiniBarSpace)
-                                            } else {
-                                                innerPadding
-                                            },
+                                        innerPadding = innerPadding,
                                         navController = navController,
                                         hideNavBar = {
                                             isNavBarVisible = false
@@ -753,19 +737,6 @@ fun App(
                                         },
                                     )
                                 }
-                            }
-                            this@Row.AnimatedVisibility(
-                                modifier =
-                                    Modifier
-                                        .padding(innerPadding)
-                                        .align(Alignment.BottomCenter)
-                                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                                        .widthIn(max = 720.dp),
-                                visible = isXyzShell && isShowMiniPlayer && isTablet && !isInFullscreen && !onXyzHome,
-                                enter = fadeIn(),
-                                exit = fadeOut(),
-                            ) {
-                                XyzMiniBar(onOpenPlayer = { navController.navigateXyzPage(HomeDestination) })
                             }
                             this@Row.AnimatedVisibility(
                                 modifier =
@@ -1133,7 +1104,3 @@ fun App(
         )
     }
 }
-
-// Room the XYZ shell's floating mini bar takes at the bottom of a page on a tablet or head unit:
-// the bar plus its margins, so the end of every list scrolls clear of it.
-private val XyzTabletMiniBarSpace = 92.dp

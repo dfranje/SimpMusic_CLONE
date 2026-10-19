@@ -510,6 +510,12 @@
     <string name="xyz_empty_songs">Songs you play will show up here</string>
     <string name="xyz_empty_favorite_songs">Tap the heart on a song to keep it here</string>
     <string name="xyz_empty_favorite_artists">Artists you follow will show up here</string>
+    <string name="xyz_artist_badge">Artist</string>
+    <string name="xyz_play">Play</string>
+    <string name="xyz_popular_songs">Popular songs</string>
+    <string name="xyz_see_all">See all</string>
+    <string name="xyz_artist_liked_songs">Your liked songs by this artist</string>
+    <string name="xyz_artist_no_liked_songs">Tap the heart on one of their songs to keep it here</string>
     <string name="donation">If you love my work, give me a coffee</string>
     <string name="relax">Relax</string>
     <string name="sleep">Sleep</string>

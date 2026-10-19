@@ -93,7 +93,7 @@ private const val SEARCH_DEBOUNCE_MS = 450L
 
 /** The page padding: the shell's insets plus the launcher's gutter. */
 @Composable
-private fun pagePadding(innerPadding: PaddingValues): PaddingValues {
+internal fun pagePadding(innerPadding: PaddingValues): PaddingValues {
     val direction = LocalLayoutDirection.current
     return PaddingValues(
         start = innerPadding.calculateStartPadding(direction) + 16.dp,

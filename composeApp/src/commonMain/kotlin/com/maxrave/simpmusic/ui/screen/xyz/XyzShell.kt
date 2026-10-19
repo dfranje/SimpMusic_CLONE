@@ -1,11 +1,7 @@
 package com.maxrave.simpmusic.ui.screen.xyz
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,11 +19,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,34 +29,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.maxrave.domain.data.player.GenericMediaItem
 import com.maxrave.simpmusic.expect.ui.rememberLeaveApp
-import com.maxrave.simpmusic.extension.LeftToRight
 import com.maxrave.simpmusic.ui.icon.ArrowBackIosNew
 import com.maxrave.simpmusic.ui.icon.Artist
 import com.maxrave.simpmusic.ui.icon.Favorite
 import com.maxrave.simpmusic.ui.icon.Home
 import com.maxrave.simpmusic.ui.icon.MusicNote
-import com.maxrave.simpmusic.ui.icon.Pause
-import com.maxrave.simpmusic.ui.icon.PlayArrow
 import com.maxrave.simpmusic.ui.icon.Settings
 import com.maxrave.simpmusic.ui.icon.SimpIcons
-import com.maxrave.simpmusic.ui.icon.SkipNext
 import com.maxrave.simpmusic.ui.navigation.destination.home.HomeDestination
 import com.maxrave.simpmusic.ui.navigation.destination.home.SettingsDestination
 import com.maxrave.simpmusic.ui.navigation.destination.xyz.XyzArtistsDestination
@@ -70,11 +56,8 @@ import com.maxrave.simpmusic.ui.navigation.destination.xyz.XyzFavoritesDestinati
 import com.maxrave.simpmusic.ui.navigation.destination.xyz.XyzSongsDestination
 import com.maxrave.simpmusic.ui.theme.typo
 import com.maxrave.simpmusic.ui.theme.xyzRim
-import com.maxrave.simpmusic.viewModel.SharedViewModel
-import com.maxrave.simpmusic.viewModel.UIEvent
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.koinInject
 import simpmusic.composeapp.generated.resources.Res
 import simpmusic.composeapp.generated.resources.artists
 import simpmusic.composeapp.generated.resources.home
@@ -82,8 +65,6 @@ import simpmusic.composeapp.generated.resources.settings
 import simpmusic.composeapp.generated.resources.songs
 import simpmusic.composeapp.generated.resources.xyz_back
 import simpmusic.composeapp.generated.resources.xyz_favorites
-import simpmusic.composeapp.generated.resources.xyz_next
-import simpmusic.composeapp.generated.resources.xyz_play_pause
 import kotlin.reflect.KClass
 
 /** One sidebar page of the XYZ shell. */
@@ -104,9 +85,6 @@ private val XyzNavItems =
     )
 
 private fun NavDestination?.isOn(item: XyzNavItem): Boolean = this?.hierarchy?.any { it.hasRoute(item.route) } == true
-
-/** Whether the shell is on Home, where the player itself is the page and no mini bar is needed. */
-fun NavDestination?.isXyzHome(): Boolean = this?.hierarchy?.any { it.hasRoute(HomeDestination::class) } == true
 
 /** Opens a sidebar page the way the stock tabs do: one copy of each, its scroll and state kept. */
 fun NavController.navigateXyzPage(destination: Any) {
@@ -248,69 +226,3 @@ fun XyzBottomBar(navController: NavController) {
         }
     }
 }
-
-/**
- * The small bar under every page but Home: what is playing, play/pause and next. Tapping it opens Home,
- * which is the player.
- */
-@Composable
-fun XyzMiniBar(
-    onOpenPlayer: () -> Unit,
-    modifier: Modifier = Modifier,
-    sharedViewModel: SharedViewModel = koinInject(),
-) {
-    val p = xyzPalette()
-    val nowPlaying by sharedViewModel.nowPlayingState.collectAsStateWithLifecycle()
-    val screenData by sharedViewModel.nowPlayingScreenData.collectAsStateWithLifecycle()
-    val controller by sharedViewModel.controllerState.collectAsStateWithLifecycle()
-    val timeline by sharedViewModel.timeline.collectAsStateWithLifecycle()
-    val item = nowPlaying?.mediaItem
-    if (item == null || item == GenericMediaItem.EMPTY) return
-    val progress = if (timeline.total > 0 && timeline.current >= 0) (timeline.current.toFloat() / timeline.total).coerceIn(0f, 1f) else 0f
-
-    XyzCard(modifier = modifier.fillMaxWidth().height(MiniBarHeight).clickable(onClick = onOpenPlayer), corner = 20.dp, glow = false) {
-        Row(
-            Modifier.fillMaxWidth().fillMaxHeight().padding(horizontal = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            XyzArtwork(screenData.thumbnailURL, Modifier.size(46.dp), corner = 10.dp)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(screenData.nowPlayingTitle, style = typo().labelMedium, color = p.text, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(screenData.artistName, style = typo().bodySmall, color = p.textDim, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            LeftToRight {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier
-                            .size(46.dp)
-                            .clip(CircleShape)
-                            .background(p.cardTop)
-                            .border(3.dp, Brush.sweepGradient(listOf(p.accent, p.accent2, p.accent)), CircleShape)
-                            .clickable { sharedViewModel.onUIEvent(UIEvent.PlayPause) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            if (controller.isPlaying) SimpIcons.Pause else SimpIcons.PlayArrow,
-                            contentDescription = stringResource(Res.string.xyz_play_pause),
-                            tint = p.text,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
-                    IconButton(onClick = { sharedViewModel.onUIEvent(UIEvent.Next) }) {
-                        Icon(SimpIcons.SkipNext, contentDescription = stringResource(Res.string.xyz_next), tint = p.text)
-                    }
-                }
-            }
-        }
-        // The track's progress along the bottom edge.
-        LeftToRight {
-            Canvas(Modifier.fillMaxWidth().height(3.dp).align(Alignment.BottomStart).padding(horizontal = 16.dp)) {
-                drawLine(p.tile, Offset(0f, size.height / 2), Offset(size.width, size.height / 2), strokeWidth = size.height, cap = StrokeCap.Round)
-                drawLine(p.accent, Offset(0f, size.height / 2), Offset(size.width * progress, size.height / 2), strokeWidth = size.height, cap = StrokeCap.Round)
-            }
-        }
-    }
-}
-
-private val MiniBarHeight = 68.dp

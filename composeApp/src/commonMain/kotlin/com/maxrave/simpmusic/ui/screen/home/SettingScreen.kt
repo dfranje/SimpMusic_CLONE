@@ -1949,139 +1949,51 @@ fun SettingScreen(
                 }
             }
         }
-        item(key = "AI") {
-            SettingGroup(title = stringResource(Res.string.ai)) {
-                SettingItem(
-                    title = stringResource(Res.string.ai_provider),
-                    subtitle =
-                        when (aiProvider) {
-                            DataStoreManager.AI_PROVIDER_OPENAI -> stringResource(Res.string.openai)
-                            DataStoreManager.AI_PROVIDER_GEMINI -> stringResource(Res.string.gemini)
-                            DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI -> stringResource(Res.string.openai_api_compatible)
-                            else -> stringResource(Res.string.unknown)
-                        },
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.ai_provider) },
-                                selectOne =
-                                    SettingAlertState.SelectData(
-                                        listSelect =
-                                            listOf(
-                                                (mainLyricsProvider == DataStoreManager.AI_PROVIDER_OPENAI) to
-                                                    runBlocking { getString(Res.string.openai) },
-                                                (mainLyricsProvider == DataStoreManager.AI_PROVIDER_GEMINI) to
-                                                    runBlocking { getString(Res.string.gemini) },
-                                                (mainLyricsProvider == DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI) to
-                                                    runBlocking { getString(Res.string.openai_api_compatible) },
-                                            ),
-                                    ),
-                                confirm =
-                                    runBlocking { getString(Res.string.change) } to { state ->
-                                        viewModel.setAIProvider(
-                                            when (state.selectOne?.getSelected()) {
-                                                runBlocking { getString(Res.string.openai) } -> DataStoreManager.AI_PROVIDER_OPENAI
-                                                runBlocking { getString(Res.string.gemini) } -> DataStoreManager.AI_PROVIDER_GEMINI
-                                                runBlocking {
-                                                    getString(
-                                                        Res.string.openai_api_compatible,
-                                                    )
-                                                },
-                                                -> DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI
-
-                                                else -> DataStoreManager.AI_PROVIDER_OPENAI
-                                            },
-                                        )
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.ai_api_key),
-                    subtitle = if (isHasApiKey) "XXXXXXXXXX" else "N/A",
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.ai_api_key) },
-                                textField =
-                                    SettingAlertState.TextFieldData(
-                                        label = runBlocking { getString(Res.string.ai_api_key) },
-                                        value = "",
-                                        verifyCodeBlock = {
-                                            (it.isNotEmpty()) to runBlocking { getString(Res.string.invalid_api_key) }
-                                        },
-                                    ),
-                                message = "",
-                                confirm =
-                                    runBlocking { getString(Res.string.set) } to { state ->
-                                        viewModel.setAIApiKey(state.textField?.value ?: "")
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.custom_ai_model_id),
-                    subtitle = customModelId.ifEmpty { stringResource(Res.string.default_models) },
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.custom_ai_model_id) },
-                                textField =
-                                    SettingAlertState.TextFieldData(
-                                        label = runBlocking { getString(Res.string.custom_ai_model_id) },
-                                        value = "",
-                                        verifyCodeBlock = {
-                                            (it.isNotEmpty() && !it.contains(" ")) to runBlocking { getString(Res.string.invalid) }
-                                        },
-                                    ),
-                                message = runBlocking { getString(Res.string.custom_model_id_messages) },
-                                confirm =
-                                    runBlocking { getString(Res.string.set) } to { state ->
-                                        viewModel.setCustomModelId(state.textField?.value ?: "")
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
-                // Custom OpenAI Base URL - only show when Custom OpenAI is selected
-                if (aiProvider == DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI) {
-                    val defaultBaseUrl = "https://api.openai.com/v1/"
-                    val customBaseUrlTitle = stringResource(Res.string.custom_base_url)
-                    val baseUrlLabel = stringResource(Res.string.base_url)
-                    val invalidUrlFormat = stringResource(Res.string.invalid_url_format)
-                    val customBaseUrlMessage = stringResource(Res.string.custom_base_url_message, defaultBaseUrl)
-                    val customHeadersJsonTitle = stringResource(Res.string.custom_headers_json)
-                    val headersJsonLabel = stringResource(Res.string.headers_json)
-                    val invalidJsonFormat = stringResource(Res.string.invalid_json_format)
-                    // The example JSON stays out of the translated text, so no translation can break it.
-                    val customHeadersMessage =
-                        stringResource(Res.string.custom_headers_message) + "\n{\"key1\":\"value1\",\"key2\":\"value2\"}"
+        // No AI in the XYZ look (its provider, keys and lyrics translation).
+        if (!isXyzLook) {
+            item(key = "AI") {
+                SettingGroup(title = stringResource(Res.string.ai)) {
                     SettingItem(
-                        title = customBaseUrlTitle,
-                        subtitle = customOpenAIBaseUrl.ifEmpty { defaultBaseUrl },
+                        title = stringResource(Res.string.ai_provider),
+                        subtitle =
+                            when (aiProvider) {
+                                DataStoreManager.AI_PROVIDER_OPENAI -> stringResource(Res.string.openai)
+                                DataStoreManager.AI_PROVIDER_GEMINI -> stringResource(Res.string.gemini)
+                                DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI -> stringResource(Res.string.openai_api_compatible)
+                                else -> stringResource(Res.string.unknown)
+                            },
                         onClick = {
                             viewModel.setAlertData(
                                 SettingAlertState(
-                                    title = customBaseUrlTitle,
-                                    textField =
-                                        SettingAlertState.TextFieldData(
-                                            label = baseUrlLabel,
-                                            value = customOpenAIBaseUrl,
-                                            verifyCodeBlock = {
-                                                (it.isEmpty() || it.startsWith("http")) to invalidUrlFormat
-                                            },
+                                    title = runBlocking { getString(Res.string.ai_provider) },
+                                    selectOne =
+                                        SettingAlertState.SelectData(
+                                            listSelect =
+                                                listOf(
+                                                    (mainLyricsProvider == DataStoreManager.AI_PROVIDER_OPENAI) to
+                                                        runBlocking { getString(Res.string.openai) },
+                                                    (mainLyricsProvider == DataStoreManager.AI_PROVIDER_GEMINI) to
+                                                        runBlocking { getString(Res.string.gemini) },
+                                                    (mainLyricsProvider == DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI) to
+                                                        runBlocking { getString(Res.string.openai_api_compatible) },
+                                                ),
                                         ),
-                                    message = customBaseUrlMessage,
                                     confirm =
-                                        runBlocking { getString(Res.string.set) } to { state ->
-                                            val baseUrl = state.textField?.value ?: ""
-                                            viewModel.setCustomOpenAIBaseUrl(baseUrl)
-                                            localNetworkPermission.requestIfNeeded(baseUrl)
+                                        runBlocking { getString(Res.string.change) } to { state ->
+                                            viewModel.setAIProvider(
+                                                when (state.selectOne?.getSelected()) {
+                                                    runBlocking { getString(Res.string.openai) } -> DataStoreManager.AI_PROVIDER_OPENAI
+                                                    runBlocking { getString(Res.string.gemini) } -> DataStoreManager.AI_PROVIDER_GEMINI
+                                                    runBlocking {
+                                                        getString(
+                                                            Res.string.openai_api_compatible,
+                                                        )
+                                                    },
+                                                    -> DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI
+
+                                                    else -> DataStoreManager.AI_PROVIDER_OPENAI
+                                                },
+                                            )
                                         },
                                     dismiss = runBlocking { getString(Res.string.cancel) },
                                 ),
@@ -2089,47 +2001,138 @@ fun SettingScreen(
                         },
                     )
                     SettingItem(
-                        title = stringResource(Res.string.custom_headers),
-                        subtitle = stringResource(if (customOpenAIHeaders.isNotEmpty()) Res.string.configured else Res.string.not_set),
+                        title = stringResource(Res.string.ai_api_key),
+                        subtitle = if (isHasApiKey) "XXXXXXXXXX" else "N/A",
                         onClick = {
                             viewModel.setAlertData(
                                 SettingAlertState(
-                                    title = customHeadersJsonTitle,
+                                    title = runBlocking { getString(Res.string.ai_api_key) },
                                     textField =
                                         SettingAlertState.TextFieldData(
-                                            label = headersJsonLabel,
-                                            value = customOpenAIHeaders,
-                                            verifyCodeBlock = { input ->
-                                                if (input.isEmpty()) {
-                                                    true to null
-                                                } else {
-                                                    try {
-                                                        // Simple validation: check if it looks like JSON
-                                                        val trimmed = input.trim()
-                                                        (trimmed.startsWith("{") && trimmed.endsWith("}")) to invalidJsonFormat
-                                                    } catch (e: Exception) {
-                                                        false to invalidJsonFormat
-                                                    }
-                                                }
+                                            label = runBlocking { getString(Res.string.ai_api_key) },
+                                            value = "",
+                                            verifyCodeBlock = {
+                                                (it.isNotEmpty()) to runBlocking { getString(Res.string.invalid_api_key) }
                                             },
                                         ),
-                                    message = customHeadersMessage,
+                                    message = "",
                                     confirm =
                                         runBlocking { getString(Res.string.set) } to { state ->
-                                            viewModel.setCustomOpenAIHeaders(state.textField?.value ?: "")
+                                            viewModel.setAIApiKey(state.textField?.value ?: "")
                                         },
                                     dismiss = runBlocking { getString(Res.string.cancel) },
                                 ),
                             )
                         },
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.custom_ai_model_id),
+                        subtitle = customModelId.ifEmpty { stringResource(Res.string.default_models) },
+                        onClick = {
+                            viewModel.setAlertData(
+                                SettingAlertState(
+                                    title = runBlocking { getString(Res.string.custom_ai_model_id) },
+                                    textField =
+                                        SettingAlertState.TextFieldData(
+                                            label = runBlocking { getString(Res.string.custom_ai_model_id) },
+                                            value = "",
+                                            verifyCodeBlock = {
+                                                (it.isNotEmpty() && !it.contains(" ")) to runBlocking { getString(Res.string.invalid) }
+                                            },
+                                        ),
+                                    message = runBlocking { getString(Res.string.custom_model_id_messages) },
+                                    confirm =
+                                        runBlocking { getString(Res.string.set) } to { state ->
+                                            viewModel.setCustomModelId(state.textField?.value ?: "")
+                                        },
+                                    dismiss = runBlocking { getString(Res.string.cancel) },
+                                ),
+                            )
+                        },
+                    )
+                    // Custom OpenAI Base URL - only show when Custom OpenAI is selected
+                    if (aiProvider == DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI) {
+                        val defaultBaseUrl = "https://api.openai.com/v1/"
+                        val customBaseUrlTitle = stringResource(Res.string.custom_base_url)
+                        val baseUrlLabel = stringResource(Res.string.base_url)
+                        val invalidUrlFormat = stringResource(Res.string.invalid_url_format)
+                        val customBaseUrlMessage = stringResource(Res.string.custom_base_url_message, defaultBaseUrl)
+                        val customHeadersJsonTitle = stringResource(Res.string.custom_headers_json)
+                        val headersJsonLabel = stringResource(Res.string.headers_json)
+                        val invalidJsonFormat = stringResource(Res.string.invalid_json_format)
+                        // The example JSON stays out of the translated text, so no translation can break it.
+                        val customHeadersMessage =
+                            stringResource(Res.string.custom_headers_message) + "\n{\"key1\":\"value1\",\"key2\":\"value2\"}"
+                        SettingItem(
+                            title = customBaseUrlTitle,
+                            subtitle = customOpenAIBaseUrl.ifEmpty { defaultBaseUrl },
+                            onClick = {
+                                viewModel.setAlertData(
+                                    SettingAlertState(
+                                        title = customBaseUrlTitle,
+                                        textField =
+                                            SettingAlertState.TextFieldData(
+                                                label = baseUrlLabel,
+                                                value = customOpenAIBaseUrl,
+                                                verifyCodeBlock = {
+                                                    (it.isEmpty() || it.startsWith("http")) to invalidUrlFormat
+                                                },
+                                            ),
+                                        message = customBaseUrlMessage,
+                                        confirm =
+                                            runBlocking { getString(Res.string.set) } to { state ->
+                                                val baseUrl = state.textField?.value ?: ""
+                                                viewModel.setCustomOpenAIBaseUrl(baseUrl)
+                                                localNetworkPermission.requestIfNeeded(baseUrl)
+                                            },
+                                        dismiss = runBlocking { getString(Res.string.cancel) },
+                                    ),
+                                )
+                            },
+                        )
+                        SettingItem(
+                            title = stringResource(Res.string.custom_headers),
+                            subtitle = stringResource(if (customOpenAIHeaders.isNotEmpty()) Res.string.configured else Res.string.not_set),
+                            onClick = {
+                                viewModel.setAlertData(
+                                    SettingAlertState(
+                                        title = customHeadersJsonTitle,
+                                        textField =
+                                            SettingAlertState.TextFieldData(
+                                                label = headersJsonLabel,
+                                                value = customOpenAIHeaders,
+                                                verifyCodeBlock = { input ->
+                                                    if (input.isEmpty()) {
+                                                        true to null
+                                                    } else {
+                                                        try {
+                                                            // Simple validation: check if it looks like JSON
+                                                            val trimmed = input.trim()
+                                                            (trimmed.startsWith("{") && trimmed.endsWith("}")) to invalidJsonFormat
+                                                        } catch (e: Exception) {
+                                                            false to invalidJsonFormat
+                                                        }
+                                                    }
+                                                },
+                                            ),
+                                        message = customHeadersMessage,
+                                        confirm =
+                                            runBlocking { getString(Res.string.set) } to { state ->
+                                                viewModel.setCustomOpenAIHeaders(state.textField?.value ?: "")
+                                            },
+                                        dismiss = runBlocking { getString(Res.string.cancel) },
+                                    ),
+                                )
+                            },
+                        )
+                    }
+                    SettingItem(
+                        title = stringResource(Res.string.use_ai_translation),
+                        subtitle = stringResource(Res.string.use_ai_translation_description),
+                        switch = (useAITranslation to { viewModel.setAITranslation(it) }),
+                        isEnable = isHasApiKey,
                     )
                 }
-                SettingItem(
-                    title = stringResource(Res.string.use_ai_translation),
-                    subtitle = stringResource(Res.string.use_ai_translation_description),
-                    switch = (useAITranslation to { viewModel.setAITranslation(it) }),
-                    isEnable = isHasApiKey,
-                )
             }
         }
         // No Spotify in the XYZ look (its canvas, lyrics and login).

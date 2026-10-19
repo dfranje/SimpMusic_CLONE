@@ -26,6 +26,14 @@ import com.maxrave.simpmusic.ui.screen.library.LibraryScreen
 import com.maxrave.simpmusic.ui.screen.library.MixForYouScreen
 import com.maxrave.simpmusic.ui.screen.other.SearchScreen
 import com.maxrave.simpmusic.ui.screen.player.FullscreenPlayer
+import com.maxrave.simpmusic.ui.navigation.destination.xyz.XyzArtistsDestination
+import com.maxrave.simpmusic.ui.navigation.destination.xyz.XyzFavoritesDestination
+import com.maxrave.simpmusic.ui.navigation.destination.xyz.XyzSongsDestination
+import com.maxrave.simpmusic.ui.screen.xyz.XyzArtistsScreen
+import com.maxrave.simpmusic.ui.screen.xyz.XyzFavoritesScreen
+import com.maxrave.simpmusic.ui.screen.xyz.XyzHomeScreen
+import com.maxrave.simpmusic.ui.screen.xyz.XyzSongsScreen
+import com.maxrave.simpmusic.ui.theme.LocalXyzPalette
 
 @Composable
 @ExperimentalMaterial3Api
@@ -57,9 +65,33 @@ fun AppNavigationGraph(
     ) {
         // Bottom bar destinations
         composable<HomeDestination> {
-            HomeScreen(
-                onScrolling = onScrolling,
+            // In the XYZ look Home is the player (XyzShell.kt); the stock feed stays for every other look.
+            if (LocalXyzPalette.current != null) {
+                XyzHomeScreen(
+                    navController = navController,
+                    innerPadding = innerPadding,
+                )
+            } else {
+                HomeScreen(
+                    onScrolling = onScrolling,
+                    navController = navController,
+                )
+            }
+        }
+        // The XYZ shell's own sidebar pages.
+        composable<XyzArtistsDestination> {
+            XyzArtistsScreen(
                 navController = navController,
+                innerPadding = innerPadding,
+            )
+        }
+        composable<XyzSongsDestination> {
+            XyzSongsScreen(innerPadding = innerPadding)
+        }
+        composable<XyzFavoritesDestination> {
+            XyzFavoritesScreen(
+                navController = navController,
+                innerPadding = innerPadding,
             )
         }
         composable<SearchDestination> {

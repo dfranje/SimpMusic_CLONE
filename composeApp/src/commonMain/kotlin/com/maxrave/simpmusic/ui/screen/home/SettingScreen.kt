@@ -596,6 +596,7 @@ fun SettingScreen(
     val xyzAccent = xyzAccentSettingOrDefault(storedXyzAccent, canFollowXyzLauncher())
     // Provided by AppTheme: tells whether the launcher actually answered, i.e. whether day/night is its call.
     val xyzPalette = LocalXyzPalette.current
+    val isXyzLook = themeColorSource == THEME_COLOR_XYZ
     val followsLauncherDayNight =
         themeColorSource == THEME_COLOR_XYZ && xyzAccent == XYZ_ACCENT_FOLLOW && xyzPalette?.fromLauncher == true
     val nowPlayingStyle by sharedViewModel.getNowPlayingStyle().collectAsStateWithLifecycle(DataStoreManager.NOW_PLAYING_STYLE_SPOTIFY)
@@ -780,68 +781,150 @@ fun SettingScreen(
                             )
                         },
                     )
-                    // The Apple Music treatments ARE the blur — the frosted page behind the player, and
-                    // the depth of field on the lyrics — and Modifier.blur is a documented no-op below
-                    // Android 12, so on an older device they render as a flat, wrong-looking version of
-                    // themselves. The requirement is spelled out on the option itself rather than left
-                    // for the user to discover after switching.
-                    val requiresAndroid12 = " (" + stringResource(Res.string.requires_android_12) + ")"
-                    val nowPlayingStyleLabels =
-                        listOf(
-                            DataStoreManager.NOW_PLAYING_STYLE_SPOTIFY to stringResource(Res.string.now_playing_style_spotify),
-                            DataStoreManager.NOW_PLAYING_STYLE_M3_EXPRESSIVE to stringResource(Res.string.now_playing_style_m3_expressive),
-                            DataStoreManager.NOW_PLAYING_STYLE_APPLE_MUSIC to
-                                stringResource(Res.string.now_playing_style_apple_music) + requiresAndroid12,
-                        )
-                    SettingItem(
-                        title = stringResource(Res.string.now_playing_style),
-                        subtitle = nowPlayingStyleLabels.firstOrNull { it.first == nowPlayingStyle }?.second ?: "",
-                        onClick = {
-                            viewModel.setAlertData(
-                                SettingAlertState(
-                                    title = runBlocking { getString(Res.string.now_playing_style) },
-                                    selectOne =
-                                        SettingAlertState.SelectData(
-                                            listSelect = nowPlayingStyleLabels.map { (it.first == nowPlayingStyle) to it.second },
-                                        ),
-                                    confirm =
-                                        runBlocking { getString(Res.string.change) } to { state ->
-                                            val selected = state.selectOne?.getSelected()
-                                            nowPlayingStyleLabels.firstOrNull { it.second == selected }?.first?.let {
-                                                sharedViewModel.setNowPlayingStyle(it)
-                                            }
-                                        },
-                                    dismiss = runBlocking { getString(Res.string.cancel) },
-                                ),
-                            )
-                        },
-                    )
-                    // Hidden outright below Android 12 rather than offered with one option: the Apple
-                    // Music treatment IS the blur, and Modifier.blur is a documented no-op there, so
-                    // the choice would be between Classic and a broken-looking Classic.
-                    if (isLyricsBlurSupported()) {
-                        val lyricsStyleLabels =
+                    // The XYZ look has no lyrics and no other player: its Home is the player.
+                    if (!isXyzLook) {
+                        // The Apple Music treatments ARE the blur — the frosted page behind the player, and
+                        // the depth of field on the lyrics — and Modifier.blur is a documented no-op below
+                        // Android 12, so on an older device they render as a flat, wrong-looking version of
+                        // themselves. The requirement is spelled out on the option itself rather than left
+                        // for the user to discover after switching.
+                        val requiresAndroid12 = " (" + stringResource(Res.string.requires_android_12) + ")"
+                        val nowPlayingStyleLabels =
                             listOf(
-                                DataStoreManager.LYRICS_STYLE_CLASSIC to stringResource(Res.string.lyrics_style_classic),
-                                DataStoreManager.LYRICS_STYLE_APPLE_MUSIC to
-                                    stringResource(Res.string.lyrics_style_apple_music) + requiresAndroid12,
+                                DataStoreManager.NOW_PLAYING_STYLE_SPOTIFY to stringResource(Res.string.now_playing_style_spotify),
+                                DataStoreManager.NOW_PLAYING_STYLE_M3_EXPRESSIVE to stringResource(Res.string.now_playing_style_m3_expressive),
+                                DataStoreManager.NOW_PLAYING_STYLE_APPLE_MUSIC to
+                                    stringResource(Res.string.now_playing_style_apple_music) + requiresAndroid12,
                             )
                         SettingItem(
-                            title = stringResource(Res.string.lyrics_style),
-                            subtitle = lyricsStyleLabels.firstOrNull { it.first == lyricsStyle }?.second ?: "",
+                            title = stringResource(Res.string.now_playing_style),
+                            subtitle = nowPlayingStyleLabels.firstOrNull { it.first == nowPlayingStyle }?.second ?: "",
                             onClick = {
                                 viewModel.setAlertData(
                                     SettingAlertState(
-                                        title = runBlocking { getString(Res.string.lyrics_style) },
+                                        title = runBlocking { getString(Res.string.now_playing_style) },
                                         selectOne =
                                             SettingAlertState.SelectData(
-                                                listSelect = lyricsStyleLabels.map { (it.first == lyricsStyle) to it.second },
+                                                listSelect = nowPlayingStyleLabels.map { (it.first == nowPlayingStyle) to it.second },
                                             ),
                                         confirm =
                                             runBlocking { getString(Res.string.change) } to { state ->
                                                 val selected = state.selectOne?.getSelected()
-                                                lyricsStyleLabels.firstOrNull { it.second == selected }?.first?.let {
-                                                    sharedViewModel.setLyricsStyle(it)
+                                                nowPlayingStyleLabels.firstOrNull { it.second == selected }?.first?.let {
+                                                    sharedViewModel.setNowPlayingStyle(it)
+                                                }
+                                            },
+                                        dismiss = runBlocking { getString(Res.string.cancel) },
+                                    ),
+                                )
+                            },
+                        )
+                        // Hidden outright below Android 12 rather than offered with one option: the Apple
+                        // Music treatment IS the blur, and Modifier.blur is a documented no-op there, so
+                        // the choice would be between Classic and a broken-looking Classic.
+                        if (isLyricsBlurSupported()) {
+                            val lyricsStyleLabels =
+                                listOf(
+                                    DataStoreManager.LYRICS_STYLE_CLASSIC to stringResource(Res.string.lyrics_style_classic),
+                                    DataStoreManager.LYRICS_STYLE_APPLE_MUSIC to
+                                        stringResource(Res.string.lyrics_style_apple_music) + requiresAndroid12,
+                                )
+                            SettingItem(
+                                title = stringResource(Res.string.lyrics_style),
+                                subtitle = lyricsStyleLabels.firstOrNull { it.first == lyricsStyle }?.second ?: "",
+                                onClick = {
+                                    viewModel.setAlertData(
+                                        SettingAlertState(
+                                            title = runBlocking { getString(Res.string.lyrics_style) },
+                                            selectOne =
+                                                SettingAlertState.SelectData(
+                                                    listSelect = lyricsStyleLabels.map { (it.first == lyricsStyle) to it.second },
+                                                ),
+                                            confirm =
+                                                runBlocking { getString(Res.string.change) } to { state ->
+                                                    val selected = state.selectOne?.getSelected()
+                                                    lyricsStyleLabels.firstOrNull { it.second == selected }?.first?.let {
+                                                        sharedViewModel.setLyricsStyle(it)
+                                                    }
+                                                },
+                                            dismiss = runBlocking { getString(Res.string.cancel) },
+                                        ),
+                                    )
+                                },
+                            )
+                        }
+
+                        // Independent of BOTH style settings, and not gated on Android 12: this changes
+                        // what the words SAY, not how they are drawn, so it applies to every style on
+                        // every version. Sits next to them because a user looking for "something about
+                        // lyrics" looks in one place.
+                        val romanizationLabels =
+                            listOf(
+                                RomanizationLanguage.JAPANESE to stringResource(Res.string.romanization_japanese),
+                                RomanizationLanguage.KOREAN to stringResource(Res.string.romanization_korean),
+                                RomanizationLanguage.CHINESE to stringResource(Res.string.romanization_chinese),
+                                RomanizationLanguage.HINDI to stringResource(Res.string.romanization_hindi),
+                                RomanizationLanguage.PUNJABI to stringResource(Res.string.romanization_punjabi),
+                                RomanizationLanguage.RUSSIAN to stringResource(Res.string.romanization_russian),
+                                RomanizationLanguage.UKRAINIAN to stringResource(Res.string.romanization_ukrainian),
+                                RomanizationLanguage.SERBIAN to stringResource(Res.string.romanization_serbian),
+                                RomanizationLanguage.BULGARIAN to stringResource(Res.string.romanization_bulgarian),
+                                RomanizationLanguage.BELARUSIAN to stringResource(Res.string.romanization_belarusian),
+                                RomanizationLanguage.KYRGYZ to stringResource(Res.string.romanization_kyrgyz),
+                                RomanizationLanguage.MACEDONIAN to stringResource(Res.string.romanization_macedonian),
+                            )
+                        val romanizationSelected = RomanizationLanguage.parse(romanizationStored)
+                        SettingItem(
+                            title = stringResource(Res.string.lyrics_romanization),
+                            // Two different jobs for one line. Off, the row has to explain what the
+                            // feature IS — nobody guesses "romanization" from the title alone. On, the only
+                            // question worth answering at a glance is which of the twelve are picked, and
+                            // the explanation has served its purpose.
+                            subtitle =
+                                if (romanizationSelected.isEmpty()) {
+                                    stringResource(Res.string.lyrics_romanization_description)
+                                } else {
+                                    val selectedNames =
+                                        romanizationLabels.filter { it.first in romanizationSelected }.joinToString(", ") { it.second }
+                                    // Japanese is the one language with a dictionary pack to fetch; while
+                                    // that is in flight — or has failed — the row says so, instead of
+                                    // listing Japanese as if it were already live.
+                                    when {
+                                        RomanizationLanguage.JAPANESE !in romanizationSelected -> selectedNames
+                                        japaneseDictionaryState == RomanizationDictionaryState.DOWNLOADING ->
+                                            "$selectedNames — ${stringResource(Res.string.romanization_japanese_dict_downloading)}"
+                                        japaneseDictionaryState == RomanizationDictionaryState.FAILED ->
+                                            "$selectedNames — ${stringResource(Res.string.romanization_japanese_dict_failed)}"
+                                        else -> selectedNames
+                                    }
+                                },
+                            onClick = {
+                                viewModel.setAlertData(
+                                    SettingAlertState(
+                                        title = runBlocking { getString(Res.string.lyrics_romanization) },
+                                        // NO `message` here, deliberately. The dialog picks its body with
+                                        // an if/else-if chain that tests `message` FIRST, and that branch
+                                        // renders only the text and an optional textField — a multipleSelect
+                                        // passed alongside it is never reached, so the dialog came up with
+                                        // the description and no languages at all.
+                                        multipleSelect =
+                                            SettingAlertState.SelectData(
+                                                listSelect =
+                                                    romanizationLabels.map { (language, label) ->
+                                                        (language in romanizationSelected) to label
+                                                    },
+                                            ),
+                                        confirm =
+                                            runBlocking { getString(Res.string.save) } to { state ->
+                                                val chosen = state.multipleSelect?.getListSelected().orEmpty()
+                                                val languages =
+                                                    romanizationLabels.filter { it.second in chosen }.map { it.first }.toSet()
+                                                sharedViewModel.setRomanizationLanguages(languages)
+                                                // Japanese needs its dictionary pack on disk. A no-op when
+                                                // it is already there (or bundled, as on Desktop) — and the
+                                                // retry after a FAILED attempt is simply confirming again.
+                                                if (RomanizationLanguage.JAPANESE in languages) {
+                                                    viewModel.downloadJapaneseDictionaryIfNeeded()
                                                 }
                                             },
                                         dismiss = runBlocking { getString(Res.string.cancel) },
@@ -850,85 +933,6 @@ fun SettingScreen(
                             },
                         )
                     }
-
-                    // Independent of BOTH style settings, and not gated on Android 12: this changes
-                    // what the words SAY, not how they are drawn, so it applies to every style on
-                    // every version. Sits next to them because a user looking for "something about
-                    // lyrics" looks in one place.
-                    val romanizationLabels =
-                        listOf(
-                            RomanizationLanguage.JAPANESE to stringResource(Res.string.romanization_japanese),
-                            RomanizationLanguage.KOREAN to stringResource(Res.string.romanization_korean),
-                            RomanizationLanguage.CHINESE to stringResource(Res.string.romanization_chinese),
-                            RomanizationLanguage.HINDI to stringResource(Res.string.romanization_hindi),
-                            RomanizationLanguage.PUNJABI to stringResource(Res.string.romanization_punjabi),
-                            RomanizationLanguage.RUSSIAN to stringResource(Res.string.romanization_russian),
-                            RomanizationLanguage.UKRAINIAN to stringResource(Res.string.romanization_ukrainian),
-                            RomanizationLanguage.SERBIAN to stringResource(Res.string.romanization_serbian),
-                            RomanizationLanguage.BULGARIAN to stringResource(Res.string.romanization_bulgarian),
-                            RomanizationLanguage.BELARUSIAN to stringResource(Res.string.romanization_belarusian),
-                            RomanizationLanguage.KYRGYZ to stringResource(Res.string.romanization_kyrgyz),
-                            RomanizationLanguage.MACEDONIAN to stringResource(Res.string.romanization_macedonian),
-                        )
-                    val romanizationSelected = RomanizationLanguage.parse(romanizationStored)
-                    SettingItem(
-                        title = stringResource(Res.string.lyrics_romanization),
-                        // Two different jobs for one line. Off, the row has to explain what the
-                        // feature IS — nobody guesses "romanization" from the title alone. On, the only
-                        // question worth answering at a glance is which of the twelve are picked, and
-                        // the explanation has served its purpose.
-                        subtitle =
-                            if (romanizationSelected.isEmpty()) {
-                                stringResource(Res.string.lyrics_romanization_description)
-                            } else {
-                                val selectedNames =
-                                    romanizationLabels.filter { it.first in romanizationSelected }.joinToString(", ") { it.second }
-                                // Japanese is the one language with a dictionary pack to fetch; while
-                                // that is in flight — or has failed — the row says so, instead of
-                                // listing Japanese as if it were already live.
-                                when {
-                                    RomanizationLanguage.JAPANESE !in romanizationSelected -> selectedNames
-                                    japaneseDictionaryState == RomanizationDictionaryState.DOWNLOADING ->
-                                        "$selectedNames — ${stringResource(Res.string.romanization_japanese_dict_downloading)}"
-                                    japaneseDictionaryState == RomanizationDictionaryState.FAILED ->
-                                        "$selectedNames — ${stringResource(Res.string.romanization_japanese_dict_failed)}"
-                                    else -> selectedNames
-                                }
-                            },
-                        onClick = {
-                            viewModel.setAlertData(
-                                SettingAlertState(
-                                    title = runBlocking { getString(Res.string.lyrics_romanization) },
-                                    // NO `message` here, deliberately. The dialog picks its body with
-                                    // an if/else-if chain that tests `message` FIRST, and that branch
-                                    // renders only the text and an optional textField — a multipleSelect
-                                    // passed alongside it is never reached, so the dialog came up with
-                                    // the description and no languages at all.
-                                    multipleSelect =
-                                        SettingAlertState.SelectData(
-                                            listSelect =
-                                                romanizationLabels.map { (language, label) ->
-                                                    (language in romanizationSelected) to label
-                                                },
-                                        ),
-                                    confirm =
-                                        runBlocking { getString(Res.string.save) } to { state ->
-                                            val chosen = state.multipleSelect?.getListSelected().orEmpty()
-                                            val languages =
-                                                romanizationLabels.filter { it.second in chosen }.map { it.first }.toSet()
-                                            sharedViewModel.setRomanizationLanguages(languages)
-                                            // Japanese needs its dictionary pack on disk. A no-op when
-                                            // it is already there (or bundled, as on Desktop) — and the
-                                            // retry after a FAILED attempt is simply confirming again.
-                                            if (RomanizationLanguage.JAPANESE in languages) {
-                                                viewModel.downloadJapaneseDictionaryIfNeeded()
-                                            }
-                                        },
-                                    dismiss = runBlocking { getString(Res.string.cancel) },
-                                ),
-                            )
-                        },
-                    )
                     val colorSourceLabels =
                         buildList {
                             add(THEME_COLOR_XYZ to stringResource(Res.string.theme_color_xyz))
@@ -1740,204 +1744,206 @@ fun SettingScreen(
                 )
             }
         }
-        item(key = "lyrics") {
-            SettingGroup(title = stringResource(Res.string.lyrics)) {
-                SettingItem(
-                    title = stringResource(Res.string.main_lyrics_provider),
-                    subtitle =
-                        when (mainLyricsProvider) {
-                            DataStoreManager.SIMPMUSIC -> stringResource(Res.string.simpmusic_lyrics)
-                            DataStoreManager.YOUTUBE -> stringResource(Res.string.youtube_transcript)
-                            DataStoreManager.LRCLIB -> stringResource(Res.string.lrclib)
-                            DataStoreManager.BETTER_LYRICS -> stringResource(Res.string.better_lyrics)
-                            else -> stringResource(Res.string.unknown)
+        if (!isXyzLook) {
+            item(key = "lyrics") {
+                SettingGroup(title = stringResource(Res.string.lyrics)) {
+                    SettingItem(
+                        title = stringResource(Res.string.main_lyrics_provider),
+                        subtitle =
+                            when (mainLyricsProvider) {
+                                DataStoreManager.SIMPMUSIC -> stringResource(Res.string.simpmusic_lyrics)
+                                DataStoreManager.YOUTUBE -> stringResource(Res.string.youtube_transcript)
+                                DataStoreManager.LRCLIB -> stringResource(Res.string.lrclib)
+                                DataStoreManager.BETTER_LYRICS -> stringResource(Res.string.better_lyrics)
+                                else -> stringResource(Res.string.unknown)
+                            },
+                        onClick = {
+                            viewModel.setAlertData(
+                                SettingAlertState(
+                                    title = runBlocking { getString(Res.string.main_lyrics_provider) },
+                                    selectOne =
+                                        SettingAlertState.SelectData(
+                                            listSelect =
+                                                listOf(
+                                                    (mainLyricsProvider == DataStoreManager.SIMPMUSIC) to
+                                                        runBlocking { getString(Res.string.simpmusic_lyrics) },
+                                                    (mainLyricsProvider == DataStoreManager.YOUTUBE) to
+                                                        runBlocking { getString(Res.string.youtube_transcript) },
+                                                    (mainLyricsProvider == DataStoreManager.LRCLIB) to runBlocking { getString(Res.string.lrclib) },
+                                                    (mainLyricsProvider == DataStoreManager.BETTER_LYRICS) to
+                                                        runBlocking { getString(Res.string.better_lyrics) },
+                                                ),
+                                        ),
+                                    confirm =
+                                        runBlocking { getString(Res.string.change) } to { state ->
+                                            viewModel.setLyricsProvider(
+                                                when (state.selectOne?.getSelected()) {
+                                                    runBlocking { getString(Res.string.simpmusic_lyrics) } -> DataStoreManager.SIMPMUSIC
+                                                    runBlocking { getString(Res.string.youtube_transcript) } -> DataStoreManager.YOUTUBE
+                                                    runBlocking { getString(Res.string.lrclib) } -> DataStoreManager.LRCLIB
+                                                    runBlocking { getString(Res.string.better_lyrics) } -> DataStoreManager.BETTER_LYRICS
+                                                    else -> DataStoreManager.SIMPMUSIC
+                                                },
+                                            )
+                                        },
+                                    dismiss = runBlocking { getString(Res.string.cancel) },
+                                ),
+                            )
                         },
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.main_lyrics_provider) },
-                                selectOne =
-                                    SettingAlertState.SelectData(
-                                        listSelect =
-                                            listOf(
-                                                (mainLyricsProvider == DataStoreManager.SIMPMUSIC) to
-                                                    runBlocking { getString(Res.string.simpmusic_lyrics) },
-                                                (mainLyricsProvider == DataStoreManager.YOUTUBE) to
-                                                    runBlocking { getString(Res.string.youtube_transcript) },
-                                                (mainLyricsProvider == DataStoreManager.LRCLIB) to runBlocking { getString(Res.string.lrclib) },
-                                                (mainLyricsProvider == DataStoreManager.BETTER_LYRICS) to
-                                                    runBlocking { getString(Res.string.better_lyrics) },
-                                            ),
-                                    ),
-                                confirm =
-                                    runBlocking { getString(Res.string.change) } to { state ->
-                                        viewModel.setLyricsProvider(
-                                            when (state.selectOne?.getSelected()) {
-                                                runBlocking { getString(Res.string.simpmusic_lyrics) } -> DataStoreManager.SIMPMUSIC
-                                                runBlocking { getString(Res.string.youtube_transcript) } -> DataStoreManager.YOUTUBE
-                                                runBlocking { getString(Res.string.lrclib) } -> DataStoreManager.LRCLIB
-                                                runBlocking { getString(Res.string.better_lyrics) } -> DataStoreManager.BETTER_LYRICS
-                                                else -> DataStoreManager.SIMPMUSIC
+                    )
+
+                    SettingItem(
+                        title = stringResource(Res.string.lyrics_offset),
+                        subtitle =
+                            stringResource(
+                                Res.string.lyrics_offset_value,
+                                if (lyricsOffsetMs > 0) "+$lyricsOffsetMs" else lyricsOffsetMs.toString(),
+                            ),
+                        onClick = {
+                            viewModel.setAlertData(
+                                SettingAlertState(
+                                    title = runBlocking { getString(Res.string.lyrics_offset) },
+                                    // The dialog renders its text field INSIDE the `message != null`
+                                    // branch, so a state carrying a textField and no message opens an
+                                    // empty box with no error anywhere.
+                                    message = runBlocking { getString(Res.string.lyrics_offset_message) },
+                                    textField =
+                                        SettingAlertState.TextFieldData(
+                                            label = runBlocking { getString(Res.string.lyrics_offset) },
+                                            value = lyricsOffsetMs.toString(),
+                                            // Only that it is a whole number — no range. How far a
+                                            // listener's own audio path lags is theirs to say.
+                                            verifyCodeBlock = {
+                                                (it.trim().toIntOrNull() != null) to
+                                                    runBlocking { getString(Res.string.lyrics_offset_invalid) }
                                             },
-                                        )
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
+                                        ),
+                                    confirm =
+                                        runBlocking { getString(Res.string.change) } to { state ->
+                                            state.textField
+                                                ?.value
+                                                ?.trim()
+                                                ?.toIntOrNull()
+                                                ?.let { viewModel.setLyricsOffsetMs(it) }
+                                        },
+                                    dismiss = runBlocking { getString(Res.string.cancel) },
+                                ),
+                            )
+                        },
+                    )
 
-                SettingItem(
-                    title = stringResource(Res.string.lyrics_offset),
-                    subtitle =
-                        stringResource(
-                            Res.string.lyrics_offset_value,
-                            if (lyricsOffsetMs > 0) "+$lyricsOffsetMs" else lyricsOffsetMs.toString(),
-                        ),
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.lyrics_offset) },
-                                // The dialog renders its text field INSIDE the `message != null`
-                                // branch, so a state carrying a textField and no message opens an
-                                // empty box with no error anywhere.
-                                message = runBlocking { getString(Res.string.lyrics_offset_message) },
-                                textField =
-                                    SettingAlertState.TextFieldData(
-                                        label = runBlocking { getString(Res.string.lyrics_offset) },
-                                        value = lyricsOffsetMs.toString(),
-                                        // Only that it is a whole number — no range. How far a
-                                        // listener's own audio path lags is theirs to say.
-                                        verifyCodeBlock = {
-                                            (it.trim().toIntOrNull() != null) to
-                                                runBlocking { getString(Res.string.lyrics_offset_invalid) }
+                    SettingItem(
+                        title = stringResource(Res.string.translation_language),
+                        subtitle = translationLanguage ?: "",
+                        onClick = {
+                            viewModel.setAlertData(
+                                SettingAlertState(
+                                    title = runBlocking { getString(Res.string.translation_language) },
+                                    textField =
+                                        SettingAlertState.TextFieldData(
+                                            label = runBlocking { getString(Res.string.translation_language) },
+                                            value = translationLanguage ?: "",
+                                            verifyCodeBlock = {
+                                                (it.length == 2 && it.isTwoLetterCode()) to
+                                                    runBlocking { getString(Res.string.invalid_language_code) }
+                                            },
+                                        ),
+                                    message = runBlocking { getString(Res.string.translation_language_message) },
+                                    confirm =
+                                        runBlocking { getString(Res.string.change) } to { state ->
+                                            viewModel.setTranslationLanguage(state.textField?.value ?: "")
                                         },
-                                    ),
-                                confirm =
-                                    runBlocking { getString(Res.string.change) } to { state ->
-                                        state.textField
-                                            ?.value
-                                            ?.trim()
-                                            ?.toIntOrNull()
-                                            ?.let { viewModel.setLyricsOffsetMs(it) }
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
-
-                SettingItem(
-                    title = stringResource(Res.string.translation_language),
-                    subtitle = translationLanguage ?: "",
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.translation_language) },
-                                textField =
-                                    SettingAlertState.TextFieldData(
-                                        label = runBlocking { getString(Res.string.translation_language) },
-                                        value = translationLanguage ?: "",
-                                        verifyCodeBlock = {
-                                            (it.length == 2 && it.isTwoLetterCode()) to
-                                                runBlocking { getString(Res.string.invalid_language_code) }
+                                    dismiss = runBlocking { getString(Res.string.cancel) },
+                                ),
+                            )
+                        },
+                        isEnable = true,
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.youtube_subtitle_language),
+                        subtitle = youtubeSubtitleLanguage,
+                        onClick = {
+                            viewModel.setAlertData(
+                                SettingAlertState(
+                                    title = runBlocking { getString(Res.string.youtube_subtitle_language) },
+                                    textField =
+                                        SettingAlertState.TextFieldData(
+                                            label = runBlocking { getString(Res.string.youtube_subtitle_language) },
+                                            value = youtubeSubtitleLanguage,
+                                            verifyCodeBlock = {
+                                                (it.length == 2 && it.isTwoLetterCode()) to
+                                                    runBlocking { getString(Res.string.invalid_language_code) }
+                                            },
+                                        ),
+                                    message = runBlocking { getString(Res.string.youtube_subtitle_language_message) },
+                                    confirm =
+                                        runBlocking { getString(Res.string.change) } to { state ->
+                                            viewModel.setYoutubeSubtitleLanguage(state.textField?.value ?: "")
                                         },
-                                    ),
-                                message = runBlocking { getString(Res.string.translation_language_message) },
-                                confirm =
-                                    runBlocking { getString(Res.string.change) } to { state ->
-                                        viewModel.setTranslationLanguage(state.textField?.value ?: "")
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                    isEnable = true,
-                )
-                SettingItem(
-                    title = stringResource(Res.string.youtube_subtitle_language),
-                    subtitle = youtubeSubtitleLanguage,
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.youtube_subtitle_language) },
-                                textField =
-                                    SettingAlertState.TextFieldData(
-                                        label = runBlocking { getString(Res.string.youtube_subtitle_language) },
-                                        value = youtubeSubtitleLanguage,
-                                        verifyCodeBlock = {
-                                            (it.length == 2 && it.isTwoLetterCode()) to
-                                                runBlocking { getString(Res.string.invalid_language_code) }
+                                    dismiss = runBlocking { getString(Res.string.cancel) },
+                                ),
+                            )
+                        },
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.help_build_lyrics_database),
+                        subtitle = stringResource(Res.string.help_build_lyrics_database_description),
+                        switch = (helpBuildLyricsDatabase to { viewModel.setHelpBuildLyricsDatabase(it) }),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.contributor_name),
+                        subtitle = contributor.first.ifEmpty { stringResource(Res.string.anonymous) },
+                        isEnable = helpBuildLyricsDatabase,
+                        onClick = {
+                            viewModel.setAlertData(
+                                SettingAlertState(
+                                    title = runBlocking { getString(Res.string.contributor_name) },
+                                    textField =
+                                        SettingAlertState.TextFieldData(
+                                            label = runBlocking { getString(Res.string.contributor_name) },
+                                            value = "",
+                                        ),
+                                    message = "",
+                                    confirm =
+                                        runBlocking { getString(Res.string.set) } to { state ->
+                                            viewModel.setContributorName(state.textField?.value ?: "")
                                         },
-                                    ),
-                                message = runBlocking { getString(Res.string.youtube_subtitle_language_message) },
-                                confirm =
-                                    runBlocking { getString(Res.string.change) } to { state ->
-                                        viewModel.setYoutubeSubtitleLanguage(state.textField?.value ?: "")
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.help_build_lyrics_database),
-                    subtitle = stringResource(Res.string.help_build_lyrics_database_description),
-                    switch = (helpBuildLyricsDatabase to { viewModel.setHelpBuildLyricsDatabase(it) }),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.contributor_name),
-                    subtitle = contributor.first.ifEmpty { stringResource(Res.string.anonymous) },
-                    isEnable = helpBuildLyricsDatabase,
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.contributor_name) },
-                                textField =
-                                    SettingAlertState.TextFieldData(
-                                        label = runBlocking { getString(Res.string.contributor_name) },
-                                        value = "",
-                                    ),
-                                message = "",
-                                confirm =
-                                    runBlocking { getString(Res.string.set) } to { state ->
-                                        viewModel.setContributorName(state.textField?.value ?: "")
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.contributor_email),
-                    subtitle = contributor.second.ifEmpty { stringResource(Res.string.anonymous) },
-                    isEnable = helpBuildLyricsDatabase,
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.contributor_email) },
-                                textField =
-                                    SettingAlertState.TextFieldData(
-                                        label = runBlocking { getString(Res.string.contributor_email) },
-                                        value = "",
-                                        verifyCodeBlock = {
-                                            if (it.isNotEmpty()) {
-                                                (it.contains("@")) to runBlocking { getString(Res.string.invalid) }
-                                            } else {
-                                                true to ""
-                                            }
+                                    dismiss = runBlocking { getString(Res.string.cancel) },
+                                ),
+                            )
+                        },
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.contributor_email),
+                        subtitle = contributor.second.ifEmpty { stringResource(Res.string.anonymous) },
+                        isEnable = helpBuildLyricsDatabase,
+                        onClick = {
+                            viewModel.setAlertData(
+                                SettingAlertState(
+                                    title = runBlocking { getString(Res.string.contributor_email) },
+                                    textField =
+                                        SettingAlertState.TextFieldData(
+                                            label = runBlocking { getString(Res.string.contributor_email) },
+                                            value = "",
+                                            verifyCodeBlock = {
+                                                if (it.isNotEmpty()) {
+                                                    (it.contains("@")) to runBlocking { getString(Res.string.invalid) }
+                                                } else {
+                                                    true to ""
+                                                }
+                                            },
+                                        ),
+                                    message = "",
+                                    confirm =
+                                        runBlocking { getString(Res.string.set) } to { state ->
+                                            viewModel.setContributorEmail(state.textField?.value ?: "")
                                         },
-                                    ),
-                                message = "",
-                                confirm =
-                                    runBlocking { getString(Res.string.set) } to { state ->
-                                        viewModel.setContributorEmail(state.textField?.value ?: "")
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
+                                    dismiss = runBlocking { getString(Res.string.cancel) },
+                                ),
+                            )
+                        },
+                    )
+                }
             }
         }
         item(key = "AI") {

@@ -1515,6 +1515,9 @@ class SharedViewModel(
         // its seek window — so no provider is asked. Every caller comes through here.
         if (LiveStreamRegistry.isLive(song.videoId)) return
         viewModelScope.launch {
+            // The XYZ look shows no lyrics anywhere, so none are fetched: on a head unit the data
+            // often comes through the phone.
+            if (dataStoreManager.themeColorSource.first() == THEME_COLOR_XYZ) return@launch
             val videoId = song.videoId
             log("Get Lyrics From Format for $videoId", LogLevel.WARN)
             val artistName = song.artistName

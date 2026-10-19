@@ -1087,7 +1087,11 @@ if (getPlatform() == Platform.Android) {
   - **Mini bar (`XyzMiniBar`)** on every page but Home: cover, title, play/pause, next, progress; tapping it opens Home. On a tablet it floats over the page, and `AppNavigationGraph` gets `XyzTabletMiniBarSpace` of extra bottom padding while it shows.
   - **The stock Now Playing sheet and its tablet side panel never open in this shell**: anything that sets `isShowNowPlaylistScreen` is turned into a navigation to Home by a `LaunchedEffect` in `App.kt`.
   - **Lyrics are gone in the XYZ look**: nothing in the shell shows them, `SharedViewModel.getLyricsFromFormat` returns before any provider is asked, and Settings hides the Lyrics group plus the Now Playing style, Lyrics style and Romanization rows (`isXyzLook`).
-  - Icons added: `SimpIcons.MusicNote`, `SimpIcons.Artist` (Material Symbols, same axes as the rest).
+  - Icons added: `SimpIcons.MusicNote`, `SimpIcons.Artist`, `SimpIcons.Backspace`, `SimpIcons.Shift`, `SimpIcons.KeyboardReturn` (Material Symbols, same axes as the rest).
+  - **The app's own keyboard (`XyzKeyboard`)**: the search pills on Artists and Songs are NOT text fields, so the system IME never opens there (head units often have none that works). Tapping the pill opens `XyzKeyboard` at the bottom of the page, with the layout XYZ Radio uses (radio-core `KeyboardView.buildText`): digits, QWERTZ with Š Đ Č Ć Ž, Shift, Delete (hold to clear), a wide Space and Enter. Enter searches at once and closes it; Back closes it first. A new field elsewhere in the shell should use `XyzSearchPage`/`XyzKeyboard` rather than a `TextField`.
+  - **Picking anything to play opens Home**: `BaseViewModel.loadMediaItem` and `SharedViewModel.loadMediaItemFromTrack` (every list, page and shared-link start, and nothing automatic) raise `UserPlaybackStarts`, which `App.kt` turns into `navigateXyzPage(HomeDestination)` in the XYZ shell.
+  - **The old search is gone when a page is opened again**: `SearchText` is plain `remember` state, never saveable, so leaving Artists or Songs (picking a song does) drops the query and the results.
+  - **Not in the XYZ look**: Spotify (the whole group), Discord and Login Sync to the desktop are hidden in Settings (`isXyzLook`). Their code stays, and nothing of theirs runs without a sign-in that can no longer be started.
 
 ## 🔄 CLAUDE.md Auto-Update Rule (MANDATORY)
 

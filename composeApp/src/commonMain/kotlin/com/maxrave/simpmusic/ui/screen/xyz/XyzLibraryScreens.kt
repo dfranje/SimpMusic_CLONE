@@ -3,6 +3,7 @@ package com.maxrave.simpmusic.ui.screen.xyz
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -31,7 +32,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +51,7 @@ import com.maxrave.domain.mediaservice.handler.PlaylistType
 import com.maxrave.domain.mediaservice.handler.QueueData
 import com.maxrave.domain.repository.ArtistRepository
 import com.maxrave.domain.utils.toTrack
+import com.maxrave.simpmusic.expect.ui.PlatformBackHandler
 import com.maxrave.simpmusic.ui.component.ArtistFullWidthItems
 import com.maxrave.simpmusic.ui.component.SongFullWidthItems
 import com.maxrave.simpmusic.ui.icon.PlayArrow
@@ -101,41 +104,100 @@ private fun pagePadding(innerPadding: PaddingValues): PaddingValues {
 }
 
 /**
- * Search text that runs [search] once typing pauses, or at once from the keyboard's search key.
- * [submitted] is what the results on screen answer; blank means "show the list, not results".
+ * What the search pill holds. [submitted] is what the results on screen answer; blank means "show the
+ * page's own list". Plain state, deliberately not saveable: leaving the page (picking a song lands on
+ * Home) drops the old search, so coming back starts with an empty pill.
  */
-private class DebouncedSearch(
-    val query: String,
-    val submitted: String,
-    val onQueryChange: (String) -> Unit,
-    val onSubmit: () -> Unit,
-)
+@Stable
+private class SearchText(
+    private val runSearch: () -> (String) -> Unit,
+) {
+    var query by mutableStateOf("")
+    var submitted by mutableStateOf("")
 
+    fun type(text: String) {
+        query += text
+    }
+
+    fun backspace() {
+        query = query.dropLast(1)
+    }
+
+    fun clear() {
+        query = ""
+    }
+
+    fun submit() {
+        if (query.isNotBlank()) {
+            submitted = query
+            runSearch()(query)
+        }
+    }
+}
+
+/** Runs [search] once typing pauses for a moment, or at once on [SearchText.submit] (Enter). */
 @Composable
-private fun rememberDebouncedSearch(search: (String) -> Unit): DebouncedSearch {
-    var query by rememberSaveable { mutableStateOf("") }
-    var submitted by rememberSaveable { mutableStateOf("") }
-    LaunchedEffect(query) {
+private fun rememberSearchText(search: (String) -> Unit): SearchText {
+    val latestSearch by rememberUpdatedState(search)
+    val state = remember { SearchText { latestSearch } }
+    LaunchedEffect(state.query) {
+        val query = state.query
         if (query.isBlank()) {
-            submitted = ""
+            state.submitted = ""
             return@LaunchedEffect
         }
-        if (query == submitted) return@LaunchedEffect
+        if (query == state.submitted) return@LaunchedEffect
         delay(SEARCH_DEBOUNCE_MS)
-        submitted = query
-        search(query)
+        state.submitted = query
+        latestSearch(query)
     }
-    return DebouncedSearch(
-        query = query,
-        submitted = submitted,
-        onQueryChange = { query = it },
-        onSubmit = {
-            if (query.isNotBlank()) {
-                submitted = query
-                search(query)
+    return state
+}
+
+/**
+ * A page with the search pill at the top, [content] under it, and the app's keyboard at the bottom
+ * while the pill is being typed into. Back closes the keyboard first.
+ */
+@Composable
+private fun XyzSearchPage(
+    innerPadding: PaddingValues,
+    search: SearchText,
+    placeholder: String,
+    content: @Composable () -> Unit,
+) {
+    var keyboardOpen by remember { mutableStateOf(false) }
+    PlatformBackHandler(enabled = keyboardOpen) { keyboardOpen = false }
+    BoxWithConstraints(
+        Modifier
+            .fillMaxSize()
+            .padding(innerPadding),
+    ) {
+        val keyboardHeight = (maxHeight * 0.5f).coerceIn(190.dp, 330.dp)
+        Column(Modifier.fillMaxSize().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp)) {
+            XyzSearchBar(
+                query = search.query,
+                placeholder = placeholder,
+                active = keyboardOpen,
+                onActivate = { keyboardOpen = !keyboardOpen },
+                onClear = { search.clear() },
+            )
+            Spacer(Modifier.height(12.dp))
+            Box(Modifier.weight(1f).fillMaxWidth()) { content() }
+            if (keyboardOpen) {
+                Spacer(Modifier.height(10.dp))
+                XyzKeyboard(
+                    onChar = { search.type(it) },
+                    onBackspace = { search.backspace() },
+                    onClear = { search.clear() },
+                    onDone = {
+                        search.submit()
+                        keyboardOpen = false
+                    },
+                    modifier = Modifier.fillMaxWidth().height(keyboardHeight),
+                )
             }
-        },
-    )
+        }
+    }
 }
 
 /**
@@ -154,57 +216,51 @@ fun XyzSongsScreen(
     val searchUi by searchViewModel.searchScreenUIState.collectAsStateWithLifecycle()
     val nowPlaying by sharedViewModel.nowPlayingState.collectAsStateWithLifecycle()
     val currentVideoId = nowPlaying?.songEntity?.videoId
-    val search = rememberDebouncedSearch { searchViewModel.searchSongs(it) }
+    val search = rememberSearchText { searchViewModel.searchSongs(it) }
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = pagePadding(innerPadding), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        item(key = "search") {
-            XyzSearchBar(
-                query = search.query,
-                onQueryChange = search.onQueryChange,
-                placeholder = stringResource(Res.string.xyz_search_songs),
-                onSearch = search.onSubmit,
-                modifier = Modifier.padding(bottom = 16.dp),
-            )
-        }
-        if (search.submitted.isNotBlank()) {
-            searchStatus(searchUi, empty = searchState.searchSongsResult.isEmpty())
-            if (searchUi == SearchScreenUIState.Success) {
-                items(searchState.searchSongsResult, key = { "s${it.videoId}" }) { result ->
-                    SongFullWidthItems(
-                        track = result.toTrack(),
-                        isPlaying = result.videoId == currentVideoId,
-                        modifier = Modifier.fillMaxWidth(),
-                        onClickListener = { playSearchResult(searchViewModel, result, search.submitted) },
-                        onAddToQueue = { sharedViewModel.addListToQueue(arrayListOf(result.toTrack())) },
-                    )
-                }
-            }
-        } else {
-            item(key = "header") {
-                XyzSectionHeader(
-                    title = stringResource(Res.string.xyz_most_played_songs),
-                    subtitle = if (mostPlayed.isEmpty()) null else pluralStringResource(Res.plurals.liked_songs_count, mostPlayed.size, mostPlayed.size),
-                    modifier = Modifier.padding(bottom = 8.dp),
-                ) {
-                    if (mostPlayed.isNotEmpty()) {
-                        PlayAllAndShuffle(
-                            onPlayAll = { libraryViewModel.playAll(LibraryDynamicPlaylistType.MostPlayed) },
-                            onShuffle = { libraryViewModel.shuffle(LibraryDynamicPlaylistType.MostPlayed) },
+    XyzSearchPage(innerPadding, search, stringResource(Res.string.xyz_search_songs)) {
+        LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (search.submitted.isNotBlank()) {
+                searchStatus(searchUi, empty = searchState.searchSongsResult.isEmpty())
+                if (searchUi == SearchScreenUIState.Success) {
+                    items(searchState.searchSongsResult, key = { "s${it.videoId}" }) { result ->
+                        SongFullWidthItems(
+                            track = result.toTrack(),
+                            isPlaying = result.videoId == currentVideoId,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClickListener = { playSearchResult(searchViewModel, result, search.submitted) },
+                            onAddToQueue = { sharedViewModel.addListToQueue(arrayListOf(result.toTrack())) },
                         )
                     }
                 }
-            }
-            if (mostPlayed.isEmpty()) {
-                item(key = "empty") { XyzEmptyText(stringResource(Res.string.xyz_empty_songs)) }
-            }
-            items(mostPlayed, key = { it.videoId }) { song ->
-                SongFullWidthItems(
-                    songEntity = song,
-                    isPlaying = song.videoId == currentVideoId,
-                    modifier = Modifier.fillMaxWidth(),
-                    onClickListener = { libraryViewModel.playSong(song.videoId, LibraryDynamicPlaylistType.MostPlayed) },
-                    onAddToQueue = { sharedViewModel.addListToQueue(arrayListOf(song.toTrack())) },
-                )
+            } else {
+                item(key = "header") {
+                    XyzSectionHeader(
+                        title = stringResource(Res.string.xyz_most_played_songs),
+                        subtitle =
+                            if (mostPlayed.isEmpty()) null else pluralStringResource(Res.plurals.liked_songs_count, mostPlayed.size, mostPlayed.size),
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    ) {
+                        if (mostPlayed.isNotEmpty()) {
+                            PlayAllAndShuffle(
+                                onPlayAll = { libraryViewModel.playAll(LibraryDynamicPlaylistType.MostPlayed) },
+                                onShuffle = { libraryViewModel.shuffle(LibraryDynamicPlaylistType.MostPlayed) },
+                            )
+                        }
+                    }
+                }
+                if (mostPlayed.isEmpty()) {
+                    item(key = "empty") { XyzEmptyText(stringResource(Res.string.xyz_empty_songs)) }
+                }
+                items(mostPlayed, key = { it.videoId }) { song ->
+                    SongFullWidthItems(
+                        songEntity = song,
+                        isPlaying = song.videoId == currentVideoId,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClickListener = { libraryViewModel.playSong(song.videoId, LibraryDynamicPlaylistType.MostPlayed) },
+                        onAddToQueue = { sharedViewModel.addListToQueue(arrayListOf(song.toTrack())) },
+                    )
+                }
             }
         }
     }
@@ -303,59 +359,51 @@ fun XyzArtistsScreen(
     val artists = remember(mostPlayed) { playedArtists(mostPlayed) }
     val searchState by searchViewModel.searchScreenState.collectAsStateWithLifecycle()
     val searchUi by searchViewModel.searchScreenUIState.collectAsStateWithLifecycle()
-    val search = rememberDebouncedSearch { searchViewModel.searchArtists(it) }
+    val search = rememberSearchText { searchViewModel.searchArtists(it) }
     val fullLine: LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
 
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(ArtistTileSize + 24.dp),
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = pagePadding(innerPadding),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item(key = "search", span = fullLine) {
-            XyzSearchBar(
-                query = search.query,
-                onQueryChange = search.onQueryChange,
-                placeholder = stringResource(Res.string.xyz_search_artists),
-                onSearch = search.onSubmit,
-                modifier = Modifier.padding(bottom = 4.dp),
-            )
-        }
-        if (search.submitted.isNotBlank()) {
-            val results = searchState.searchArtistsResult
-            when {
-                searchUi == SearchScreenUIState.Loading ->
-                    item(key = "loading", span = fullLine) {
-                        Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = xyzPalette().accent)
+    XyzSearchPage(innerPadding, search, stringResource(Res.string.xyz_search_artists)) {
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(ArtistTileSize + 24.dp),
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (search.submitted.isNotBlank()) {
+                val results = searchState.searchArtistsResult
+                when {
+                    searchUi == SearchScreenUIState.Loading ->
+                        item(key = "loading", span = fullLine) {
+                            Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = xyzPalette().accent)
+                            }
                         }
-                    }
-                searchUi == SearchScreenUIState.Error ->
-                    item(key = "error", span = fullLine) { XyzEmptyText(stringResource(Res.string.xyz_search_failed)) }
-                searchUi == SearchScreenUIState.Success && results.isEmpty() ->
-                    item(key = "none", span = fullLine) { XyzEmptyText(stringResource(Res.string.xyz_no_results)) }
-                searchUi == SearchScreenUIState.Success ->
-                    items(results, key = { "a${it.browseId}" }, span = { GridItemSpan(maxLineSpan) }) { result ->
-                        ArtistFullWidthItems(
-                            data = result,
-                            onClickListener = { navController.navigate(ArtistDestination(result.browseId)) },
-                        )
-                    }
-            }
-        } else {
-            item(key = "header", span = fullLine) {
-                XyzSectionHeader(stringResource(Res.string.xyz_most_played_artists))
-            }
-            if (artists.isEmpty()) {
-                item(key = "empty", span = fullLine) { XyzEmptyText(stringResource(Res.string.xyz_empty_artists)) }
-            }
-            items(artists, key = { it.channelId }) { artist ->
-                StoredArtistTile(
-                    channelId = artist.channelId,
-                    name = artist.name,
-                    fallbackThumbnail = artist.fallbackThumbnail,
-                ) { navController.navigate(ArtistDestination(artist.channelId)) }
+                    searchUi == SearchScreenUIState.Error ->
+                        item(key = "error", span = fullLine) { XyzEmptyText(stringResource(Res.string.xyz_search_failed)) }
+                    searchUi == SearchScreenUIState.Success && results.isEmpty() ->
+                        item(key = "none", span = fullLine) { XyzEmptyText(stringResource(Res.string.xyz_no_results)) }
+                    searchUi == SearchScreenUIState.Success ->
+                        items(results, key = { "a${it.browseId}" }, span = { GridItemSpan(maxLineSpan) }) { result ->
+                            ArtistFullWidthItems(
+                                data = result,
+                                onClickListener = { navController.navigate(ArtistDestination(result.browseId)) },
+                            )
+                        }
+                }
+            } else {
+                item(key = "header", span = fullLine) {
+                    XyzSectionHeader(stringResource(Res.string.xyz_most_played_artists))
+                }
+                if (artists.isEmpty()) {
+                    item(key = "empty", span = fullLine) { XyzEmptyText(stringResource(Res.string.xyz_empty_artists)) }
+                }
+                items(artists, key = { it.channelId }) { artist ->
+                    StoredArtistTile(
+                        channelId = artist.channelId,
+                        name = artist.name,
+                        fallbackThumbnail = artist.fallbackThumbnail,
+                    ) { navController.navigate(ArtistDestination(artist.channelId)) }
+                }
             }
         }
     }

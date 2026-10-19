@@ -105,6 +105,7 @@ import com.maxrave.simpmusic.ui.screen.xyz.XyzSideBar
 import com.maxrave.simpmusic.ui.screen.xyz.isXyzHome
 import com.maxrave.simpmusic.ui.screen.xyz.navigateXyzPage
 import com.maxrave.simpmusic.ui.theme.AppTheme
+import com.maxrave.simpmusic.viewModel.base.UserPlaybackStarts
 import com.maxrave.simpmusic.ui.theme.ForceDarkContent
 import com.maxrave.simpmusic.ui.theme.THEME_COLOR_XYZ
 import com.maxrave.simpmusic.ui.theme.XYZ_ACCENT_FOLLOW
@@ -464,6 +465,11 @@ fun App(
     val onXyzHome = navBackStackEntry?.destination.isXyzHome()
     // Everything that used to raise the Now Playing sheet opens Home instead: in the XYZ shell, Home
     // is the player, and there are no lyrics or player styles for the sheet to offer.
+    // Picking a song anywhere lands on the player, which in this shell is Home.
+    LaunchedEffect(isXyzShell) {
+        if (!isXyzShell) return@LaunchedEffect
+        UserPlaybackStarts.events.collect { navController.navigateXyzPage(HomeDestination) }
+    }
     LaunchedEffect(isShowNowPlaylistScreen, isXyzShell) {
         if (isXyzShell && isShowNowPlaylistScreen) {
             isShowNowPlaylistScreen = false

@@ -1,5 +1,10 @@
 package com.maxrave.simpmusic.ui.screen.xyz
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,26 +21,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -84,57 +85,67 @@ internal fun XyzCard(
     )
 }
 
-/** The launcher's search pill: a magnifier, the field and a clear button once something is typed. */
+/**
+ * The launcher's search pill. Not a text field: the XYZ shell types with its own keyboard
+ * ([XyzKeyboard]), so tapping the pill opens that instead of asking for the system one. While it is
+ * open a caret blinks after the text.
+ */
 @Composable
 internal fun XyzSearchBar(
     query: String,
-    onQueryChange: (String) -> Unit,
     placeholder: String,
-    onSearch: () -> Unit,
+    active: Boolean,
+    onActivate: () -> Unit,
+    onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val p = xyzPalette()
-    val focusManager = LocalFocusManager.current
     val shape = RoundedCornerShape(50)
+    val caret by rememberInfiniteTransition(label = "caret").animateFloat(
+        initialValue = 1f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(tween(durationMillis = 530, easing = { if (it < 0.5f) 0f else 1f }), RepeatMode.Reverse),
+        label = "caretAlpha",
+    )
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
                 .height(52.dp)
-                .xyzRim(26.dp, shape, glow = false)
+                .xyzRim(26.dp, shape, glow = active)
                 .clip(shape)
                 .background(p.cardBrush, shape)
+                .clickable(role = Role.Button, onClick = onActivate)
                 .padding(start = 18.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(SimpIcons.Search, contentDescription = null, tint = p.textDim, modifier = Modifier.size(22.dp))
+        Icon(SimpIcons.Search, contentDescription = null, tint = if (active) p.accent else p.textDim, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(12.dp))
-        BasicTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            singleLine = true,
-            textStyle = typo().bodyLarge.copy(color = p.text),
-            cursorBrush = SolidColor(p.accent),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions =
-                KeyboardActions(
-                    onSearch = {
-                        onSearch()
-                        focusManager.clearFocus()
-                    },
-                ),
-            modifier = Modifier.weight(1f),
-            decorationBox = { field ->
-                Box(contentAlignment = Alignment.CenterStart) {
-                    if (query.isEmpty()) {
-                        Text(placeholder, style = typo().bodyLarge, color = p.textDim, maxLines = 1)
-                    }
-                    field()
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            if (query.isEmpty() && !active) {
+                Text(placeholder, style = typo().bodyLarge, color = p.textDim, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            } else {
+                Text(
+                    query,
+                    style = typo().bodyLarge,
+                    color = p.text,
+                    maxLines = 1,
+                    overflow = TextOverflow.StartEllipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (active) {
+                    Box(
+                        Modifier
+                            .padding(start = 1.dp)
+                            .width(2.dp)
+                            .height(24.dp)
+                            .background(p.accent.copy(alpha = caret)),
+                    )
                 }
-            },
-        )
+            }
+        }
         if (query.isNotEmpty()) {
-            IconButton(onClick = { onQueryChange("") }) {
+            IconButton(onClick = onClear) {
                 Icon(SimpIcons.Close, contentDescription = stringResource(Res.string.xyz_clear_search), tint = p.textDim)
             }
         } else {

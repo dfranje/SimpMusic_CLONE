@@ -498,6 +498,10 @@
     <string name="xyz_search_artists">Search artists</string>
     <string name="xyz_search_songs">Search songs</string>
     <string name="xyz_clear_search">Clear search</string>
+    <string name="xyz_kb_delete">Delete</string>
+    <string name="xyz_kb_enter">Search</string>
+    <string name="xyz_kb_shift">Shift</string>
+    <string name="xyz_kb_space">Space</string>
     <string name="xyz_most_played_artists">Artists you play most</string>
     <string name="xyz_most_played_songs">Songs you play most</string>
     <string name="xyz_no_results">Nothing found</string>

@@ -128,6 +128,7 @@ abstract class BaseViewModel :
         type: String,
         index: Int? = null,
     ) {
+        UserPlaybackStarts.notifyStarted()
         viewModelScope.launch {
             mediaPlayerHandler.loadMediaItem(
                 anyTrack = anyTrack,

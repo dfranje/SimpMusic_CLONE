@@ -723,25 +723,28 @@ fun SettingScreen(
                 )
                 // Above every section, and inside item 0 rather than an item of its own, for the
                 // glow reason above.
-                SettingGroup(
-                    title = stringResource(Res.string.login_sync_section),
-                    modifier = Modifier.onSizeChanged { devicesGroupHeightPx = it.height },
-                ) {
-                    SettingItem(
-                        title =
-                            stringResource(
-                                if (getPlatform() == Platform.Android) Res.string.login_sync_android_title else Res.string.login_sync_desktop_title,
-                            ),
-                        subtitle =
-                            stringResource(
-                                if (getPlatform() == Platform.Android) {
-                                    Res.string.login_sync_android_description
-                                } else {
-                                    Res.string.login_sync_desktop_description
-                                },
-                            ),
-                        onClick = { showLoginSyncDialog = true },
-                    )
+                // The XYZ build has no desktop app to send sign-ins to.
+                if (!isXyzLook) {
+                    SettingGroup(
+                        title = stringResource(Res.string.login_sync_section),
+                        modifier = Modifier.onSizeChanged { devicesGroupHeightPx = it.height },
+                    ) {
+                        SettingItem(
+                            title =
+                                stringResource(
+                                    if (getPlatform() == Platform.Android) Res.string.login_sync_android_title else Res.string.login_sync_desktop_title,
+                                ),
+                            subtitle =
+                                stringResource(
+                                    if (getPlatform() == Platform.Android) {
+                                        Res.string.login_sync_android_description
+                                    } else {
+                                        Res.string.login_sync_desktop_description
+                                    },
+                                ),
+                            onClick = { showLoginSyncDialog = true },
+                        )
+                    }
                 }
                 SettingGroup(title = stringResource(Res.string.user_interface)) {
                     val themeModeLabels =
@@ -2129,86 +2132,92 @@ fun SettingScreen(
                 )
             }
         }
-        item(key = "spotify") {
-            SettingGroup(title = stringResource(Res.string.spotify)) {
-                SettingItem(
-                    // The title follows the state: a row that still reads "Log in" while logged in
-                    // gives no clue that tapping it signs you out.
-                    title =
-                        if (spotifyLoggedIn) {
-                            stringResource(Res.string.log_out_from_spotify)
-                        } else {
-                            stringResource(Res.string.log_in_to_spotify)
+        // No Spotify in the XYZ look (its canvas, lyrics and login).
+        if (!isXyzLook) {
+            item(key = "spotify") {
+                SettingGroup(title = stringResource(Res.string.spotify)) {
+                    SettingItem(
+                        // The title follows the state: a row that still reads "Log in" while logged in
+                        // gives no clue that tapping it signs you out.
+                        title =
+                            if (spotifyLoggedIn) {
+                                stringResource(Res.string.log_out_from_spotify)
+                            } else {
+                                stringResource(Res.string.log_in_to_spotify)
+                            },
+                        subtitle =
+                            if (spotifyLoggedIn) {
+                                stringResource(Res.string.logged_in)
+                            } else {
+                                stringResource(Res.string.intro_login_to_spotify)
+                            },
+                        onClick = {
+                            if (spotifyLoggedIn) {
+                                viewModel.confirmLogOut(
+                                    confirmLabel = runBlocking { getString(Res.string.log_out_from_spotify) },
+                                ) { viewModel.setSpotifyLogIn(false) }
+                            } else {
+                                navController.navigate(SpotifyLoginDestination)
+                            }
                         },
-                    subtitle =
-                        if (spotifyLoggedIn) {
-                            stringResource(Res.string.logged_in)
-                        } else {
-                            stringResource(Res.string.intro_login_to_spotify)
-                        },
-                    onClick = {
-                        if (spotifyLoggedIn) {
-                            viewModel.confirmLogOut(
-                                confirmLabel = runBlocking { getString(Res.string.log_out_from_spotify) },
-                            ) { viewModel.setSpotifyLogIn(false) }
-                        } else {
-                            navController.navigate(SpotifyLoginDestination)
-                        }
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.enable_spotify_lyrics),
-                    subtitle = stringResource(Res.string.spotify_lyrícs_info),
-                    switch = (spotifyLyrics to { viewModel.setSpotifyLyrics(it) }),
-                    isEnable = spotifyLoggedIn,
-                )
-                SettingItem(
-                    title = stringResource(Res.string.enable_canvas),
-                    subtitle = stringResource(Res.string.canvas_info),
-                    switch = (spotifyCanvas to { viewModel.setSpotifyCanvas(it) }),
-                    isEnable = spotifyLoggedIn,
-                )
-                // Sits with the canvas because it replaces it, but carries no isEnable: the two
-                // rows above need a Spotify session and this one needs no account at all, so
-                // gating it on spotifyLoggedIn would lock it away from the users it works for.
-                SettingItem(
-                    title = stringResource(Res.string.enable_animated_artwork),
-                    subtitle = stringResource(Res.string.animated_artwork_info),
-                    switch = (amAnimatedArtwork to { viewModel.setAMAnimatedArtwork(it) }),
-                )
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.enable_spotify_lyrics),
+                        subtitle = stringResource(Res.string.spotify_lyrícs_info),
+                        switch = (spotifyLyrics to { viewModel.setSpotifyLyrics(it) }),
+                        isEnable = spotifyLoggedIn,
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.enable_canvas),
+                        subtitle = stringResource(Res.string.canvas_info),
+                        switch = (spotifyCanvas to { viewModel.setSpotifyCanvas(it) }),
+                        isEnable = spotifyLoggedIn,
+                    )
+                    // Sits with the canvas because it replaces it, but carries no isEnable: the two
+                    // rows above need a Spotify session and this one needs no account at all, so
+                    // gating it on spotifyLoggedIn would lock it away from the users it works for.
+                    SettingItem(
+                        title = stringResource(Res.string.enable_animated_artwork),
+                        subtitle = stringResource(Res.string.animated_artwork_info),
+                        switch = (amAnimatedArtwork to { viewModel.setAMAnimatedArtwork(it) }),
+                    )
+                }
             }
         }
-        item(key = "discord") {
-            SettingGroup(title = stringResource(Res.string.discord_integration)) {
-                SettingItem(
-                    title =
-                        if (discordLoggedIn) {
-                            stringResource(Res.string.log_out_from_discord)
-                        } else {
-                            stringResource(Res.string.log_in_to_discord)
+        // No Discord in the XYZ look.
+        if (!isXyzLook) {
+            item(key = "discord") {
+                SettingGroup(title = stringResource(Res.string.discord_integration)) {
+                    SettingItem(
+                        title =
+                            if (discordLoggedIn) {
+                                stringResource(Res.string.log_out_from_discord)
+                            } else {
+                                stringResource(Res.string.log_in_to_discord)
+                            },
+                        subtitle =
+                            if (discordLoggedIn) {
+                                stringResource(Res.string.logged_in)
+                            } else {
+                                stringResource(Res.string.intro_login_to_discord)
+                            },
+                        onClick = {
+                            if (discordLoggedIn) {
+                                viewModel.confirmLogOut(
+                                    confirmLabel = runBlocking { getString(Res.string.log_out_from_discord) },
+                                ) { viewModel.logOutDiscord() }
+                            } else {
+                                navController.navigate(DiscordLoginDestination)
+                            }
                         },
-                    subtitle =
-                        if (discordLoggedIn) {
-                            stringResource(Res.string.logged_in)
-                        } else {
-                            stringResource(Res.string.intro_login_to_discord)
-                        },
-                    onClick = {
-                        if (discordLoggedIn) {
-                            viewModel.confirmLogOut(
-                                confirmLabel = runBlocking { getString(Res.string.log_out_from_discord) },
-                            ) { viewModel.logOutDiscord() }
-                        } else {
-                            navController.navigate(DiscordLoginDestination)
-                        }
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.enable_rich_presence),
-                    subtitle = stringResource(Res.string.rich_presence_info),
-                    switch = (richPresenceEnabled to { viewModel.setDiscordRichPresenceEnabled(it) }),
-                    isEnable = discordLoggedIn,
-                )
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.enable_rich_presence),
+                        subtitle = stringResource(Res.string.rich_presence_info),
+                        switch = (richPresenceEnabled to { viewModel.setDiscordRichPresenceEnabled(it) }),
+                        isEnable = discordLoggedIn,
+                    )
+                }
             }
         }
         // Hidden entirely when the build carries no Last.fm credentials — a FOSS build, or a full

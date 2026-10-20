@@ -9,7 +9,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -72,7 +71,6 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -96,8 +94,6 @@ import com.maxrave.common.SUPPORTED_LANGUAGE
 import com.maxrave.common.SUPPORTED_LOCATION
 import com.maxrave.common.SponsorBlockType
 import com.maxrave.domain.extension.now
-import com.maxrave.domain.data.model.lyrics.RomanizationDictionaryState
-import com.maxrave.domain.data.model.lyrics.RomanizationLanguage
 import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.domain.manager.DataStoreManager.Values.TRUE
 import com.maxrave.domain.repository.ImportProgress
@@ -107,15 +103,11 @@ import com.maxrave.simpmusic.Platform
 import com.maxrave.simpmusic.expect.ui.canFollowXyzLauncher
 import com.maxrave.simpmusic.expect.ui.filePickerResult
 import com.maxrave.simpmusic.expect.ui.fileSaverResult
-import com.maxrave.simpmusic.expect.ui.isLyricsBlurSupported
-import com.maxrave.simpmusic.expect.ui.isWallpaperDynamicColorSupported
 import com.maxrave.simpmusic.expect.ui.openEqResult
-import com.maxrave.simpmusic.expect.ui.rememberLocalNetworkPermission
 import com.maxrave.simpmusic.extension.barBlurStyle
 import com.maxrave.simpmusic.extension.bytesToMB
 import com.maxrave.simpmusic.extension.displayString
 import com.maxrave.simpmusic.extension.isTwoLetterCode
-import com.maxrave.simpmusic.extension.isValidProxyHost
 import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.ui.component.ActionButton
 import com.maxrave.simpmusic.ui.component.AmbientThemeGlow
@@ -132,16 +124,12 @@ import com.maxrave.simpmusic.ui.icon.PeopleAlt
 import com.maxrave.simpmusic.ui.icon.PlaylistAdd
 import com.maxrave.simpmusic.ui.icon.SimpIcons
 import com.maxrave.simpmusic.ui.navigation.destination.home.AppLogDestination
-import com.maxrave.simpmusic.ui.navigation.destination.login.DiscordLoginDestination
 import com.maxrave.simpmusic.ui.navigation.destination.login.LastfmLoginDestination
 import com.maxrave.simpmusic.ui.navigation.destination.login.LoginDestination
-import com.maxrave.simpmusic.ui.navigation.destination.login.SpotifyLoginDestination
 import com.maxrave.simpmusic.ui.theme.LocalXyzPalette
-import com.maxrave.simpmusic.ui.theme.THEME_COLOR_XYZ
 import com.maxrave.simpmusic.ui.theme.XYZ_ACCENT_FOLLOW
 import com.maxrave.simpmusic.ui.theme.XyzAccents
 import com.maxrave.simpmusic.ui.theme.md_theme_dark_primary
-import com.maxrave.simpmusic.ui.theme.parseThemeColorHex
 import com.maxrave.simpmusic.ui.theme.typo
 import com.maxrave.simpmusic.ui.theme.xyzAccentIndex
 import com.maxrave.simpmusic.ui.theme.xyzAccentSettingOrDefault
@@ -167,43 +155,18 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import simpmusic.composeapp.generated.resources.Res
-import simpmusic.composeapp.generated.resources.base_url
-import simpmusic.composeapp.generated.resources.configured
-import simpmusic.composeapp.generated.resources.custom_base_url
-import simpmusic.composeapp.generated.resources.custom_base_url_message
-import simpmusic.composeapp.generated.resources.custom_headers
-import simpmusic.composeapp.generated.resources.custom_headers_json
-import simpmusic.composeapp.generated.resources.custom_headers_message
-import simpmusic.composeapp.generated.resources.headers_json
-import simpmusic.composeapp.generated.resources.invalid_json_format
-import simpmusic.composeapp.generated.resources.invalid_url_format
-import simpmusic.composeapp.generated.resources.not_set
 import simpmusic.composeapp.generated.resources.about_us
 import simpmusic.composeapp.generated.resources.add_an_account
-import simpmusic.composeapp.generated.resources.ai
-import simpmusic.composeapp.generated.resources.ai_api_key
-import simpmusic.composeapp.generated.resources.ai_provider
-import simpmusic.composeapp.generated.resources.anonymous
 import simpmusic.composeapp.generated.resources.app_log
 import simpmusic.composeapp.generated.resources.app_log_description
 import simpmusic.composeapp.generated.resources.app_name
 import simpmusic.composeapp.generated.resources.developer_option
 import simpmusic.composeapp.generated.resources.audio
-import simpmusic.composeapp.generated.resources.author
-import simpmusic.composeapp.generated.resources.auto_backup
-import simpmusic.composeapp.generated.resources.auto_backup_description
 import simpmusic.composeapp.generated.resources.auto_download_liked_songs
 import simpmusic.composeapp.generated.resources.auto_download_liked_songs_description
 import simpmusic.composeapp.generated.resources.backup
-import simpmusic.composeapp.generated.resources.backup_downloaded
-import simpmusic.composeapp.generated.resources.backup_downloaded_description
-import simpmusic.composeapp.generated.resources.backup_frequency
 import simpmusic.composeapp.generated.resources.balance_media_loudness
-import simpmusic.composeapp.generated.resources.better_lyrics
-import simpmusic.composeapp.generated.resources.buy_me_a_coffee
 import simpmusic.composeapp.generated.resources.cancel
-import simpmusic.composeapp.generated.resources.animated_artwork_info
-import simpmusic.composeapp.generated.resources.canvas_info
 import simpmusic.composeapp.generated.resources.categories_sponsor_block
 import simpmusic.composeapp.generated.resources.change
 import simpmusic.composeapp.generated.resources.change_language_warning
@@ -217,8 +180,6 @@ import simpmusic.composeapp.generated.resources.clear_player_cache
 import simpmusic.composeapp.generated.resources.clear_thumbnail_cache
 import simpmusic.composeapp.generated.resources.content
 import simpmusic.composeapp.generated.resources.content_country
-import simpmusic.composeapp.generated.resources.contributor_email
-import simpmusic.composeapp.generated.resources.contributor_name
 import simpmusic.composeapp.generated.resources.crossfade
 import simpmusic.composeapp.generated.resources.crossfade_auto
 import simpmusic.composeapp.generated.resources.crossfade_description
@@ -227,116 +188,47 @@ import simpmusic.composeapp.generated.resources.crossfade_dj_mode_description
 import simpmusic.composeapp.generated.resources.crossfade_duration
 import simpmusic.composeapp.generated.resources.crossfade_skip_album
 import simpmusic.composeapp.generated.resources.crossfade_skip_album_description
-import simpmusic.composeapp.generated.resources.custom_ai_model_id
-import simpmusic.composeapp.generated.resources.custom_color
-import simpmusic.composeapp.generated.resources.custom_model_id_messages
-import simpmusic.composeapp.generated.resources.daily
 import simpmusic.composeapp.generated.resources.database
-import simpmusic.composeapp.generated.resources.default_models
-import simpmusic.composeapp.generated.resources.developer_blog
-import simpmusic.composeapp.generated.resources.developer_blog_tagline
-import simpmusic.composeapp.generated.resources.discord_integration
-import simpmusic.composeapp.generated.resources.donation
 import simpmusic.composeapp.generated.resources.download_quality
 import simpmusic.composeapp.generated.resources.downloaded_cache
-import simpmusic.composeapp.generated.resources.enable_animated_artwork
-import simpmusic.composeapp.generated.resources.enable_canvas
-import simpmusic.composeapp.generated.resources.enable_rich_presence
 import simpmusic.composeapp.generated.resources.enable_scrobbling
 import simpmusic.composeapp.generated.resources.enable_sponsor_block
-import simpmusic.composeapp.generated.resources.enable_spotify_lyrics
 import simpmusic.composeapp.generated.resources.equalizer
 import simpmusic.composeapp.generated.resources.equalizer_description
 import simpmusic.composeapp.generated.resources.equalizer_type
 import simpmusic.composeapp.generated.resources.equalizer_type_built_in
 import simpmusic.composeapp.generated.resources.equalizer_type_system
-import simpmusic.composeapp.generated.resources.follow_me_on_x
 import simpmusic.composeapp.generated.resources.free_space
-import simpmusic.composeapp.generated.resources.gemini
 import simpmusic.composeapp.generated.resources.guest
-import simpmusic.composeapp.generated.resources.help_build_lyrics_database
-import simpmusic.composeapp.generated.resources.help_build_lyrics_database_description
-import simpmusic.composeapp.generated.resources.http
 import simpmusic.composeapp.generated.resources.import_data
-import simpmusic.composeapp.generated.resources.import_data_intro
 import simpmusic.composeapp.generated.resources.import_failed
-import simpmusic.composeapp.generated.resources.import_playlists_from_other_apps
 import simpmusic.composeapp.generated.resources.import_progress_songs
 import simpmusic.composeapp.generated.resources.import_reading_file
 import simpmusic.composeapp.generated.resources.import_result
 import simpmusic.composeapp.generated.resources.import_result_skipped
-import simpmusic.composeapp.generated.resources.intro_login_to_discord
 import simpmusic.composeapp.generated.resources.intro_login_to_lastfm
-import simpmusic.composeapp.generated.resources.intro_login_to_spotify
-import simpmusic.composeapp.generated.resources.invalid
-import simpmusic.composeapp.generated.resources.invalid_api_key
-import simpmusic.composeapp.generated.resources.invalid_host
 import simpmusic.composeapp.generated.resources.invalid_language_code
-import simpmusic.composeapp.generated.resources.invalid_port
-import simpmusic.composeapp.generated.resources.keep_backups
-import simpmusic.composeapp.generated.resources.keep_backups_format
 import simpmusic.composeapp.generated.resources.keep_your_youtube_playlist_offline
 import simpmusic.composeapp.generated.resources.keep_your_youtube_playlist_offline_description
 import simpmusic.composeapp.generated.resources.kill_service_on_exit
 import simpmusic.composeapp.generated.resources.kill_service_on_exit_description
 import simpmusic.composeapp.generated.resources.language
-import simpmusic.composeapp.generated.resources.last_backup
 import simpmusic.composeapp.generated.resources.lastfm_integration
 import simpmusic.composeapp.generated.resources.limit_player_cache
 import simpmusic.composeapp.generated.resources.listening_history
 import simpmusic.composeapp.generated.resources.local_tracking_description
 import simpmusic.composeapp.generated.resources.local_tracking_title
-import simpmusic.composeapp.generated.resources.log_in_to_discord
 import simpmusic.composeapp.generated.resources.log_in_to_lastfm
-import simpmusic.composeapp.generated.resources.log_in_to_spotify
 import simpmusic.composeapp.generated.resources.log_out
-import simpmusic.composeapp.generated.resources.log_out_from_discord
 import simpmusic.composeapp.generated.resources.log_out_from_lastfm
-import simpmusic.composeapp.generated.resources.log_out_from_spotify
 import simpmusic.composeapp.generated.resources.log_out_warning
-import simpmusic.composeapp.generated.resources.logged_in
 import simpmusic.composeapp.generated.resources.logged_in_as
-import simpmusic.composeapp.generated.resources.lrclib
-import simpmusic.composeapp.generated.resources.lyrics
-import simpmusic.composeapp.generated.resources.lyrics_style
-import simpmusic.composeapp.generated.resources.lyrics_offset
-import simpmusic.composeapp.generated.resources.lyrics_offset_invalid
-import simpmusic.composeapp.generated.resources.lyrics_offset_message
-import simpmusic.composeapp.generated.resources.lyrics_offset_value
-import simpmusic.composeapp.generated.resources.lyrics_romanization
-import simpmusic.composeapp.generated.resources.lyrics_romanization_description
-import simpmusic.composeapp.generated.resources.romanization_belarusian
-import simpmusic.composeapp.generated.resources.romanization_bulgarian
-import simpmusic.composeapp.generated.resources.romanization_chinese
-import simpmusic.composeapp.generated.resources.romanization_hindi
-import simpmusic.composeapp.generated.resources.romanization_japanese
-import simpmusic.composeapp.generated.resources.romanization_japanese_dict_downloading
-import simpmusic.composeapp.generated.resources.romanization_japanese_dict_failed
-import simpmusic.composeapp.generated.resources.romanization_korean
-import simpmusic.composeapp.generated.resources.romanization_kyrgyz
-import simpmusic.composeapp.generated.resources.romanization_macedonian
-import simpmusic.composeapp.generated.resources.romanization_punjabi
-import simpmusic.composeapp.generated.resources.romanization_russian
-import simpmusic.composeapp.generated.resources.romanization_serbian
-import simpmusic.composeapp.generated.resources.romanization_ukrainian
-import simpmusic.composeapp.generated.resources.lyrics_style_apple_music
-import simpmusic.composeapp.generated.resources.lyrics_style_classic
-import simpmusic.composeapp.generated.resources.main_lyrics_provider
 import simpmusic.composeapp.generated.resources.manage_your_youtube_accounts
-import simpmusic.composeapp.generated.resources.maxrave_dev
-import simpmusic.composeapp.generated.resources.monthly
-import simpmusic.composeapp.generated.resources.never
 import simpmusic.composeapp.generated.resources.no_account
 import simpmusic.composeapp.generated.resources.normalize_volume
 import simpmusic.composeapp.generated.resources.not_available_while_casting
-import simpmusic.composeapp.generated.resources.now_playing_style
-import simpmusic.composeapp.generated.resources.now_playing_style_apple_music
-import simpmusic.composeapp.generated.resources.now_playing_style_m3_expressive
-import simpmusic.composeapp.generated.resources.now_playing_style_spotify
 import simpmusic.composeapp.generated.resources.ok
 import simpmusic.composeapp.generated.resources.open_system_equalizer
-import simpmusic.composeapp.generated.resources.openai
-import simpmusic.composeapp.generated.resources.openai_api_compatible
 import simpmusic.composeapp.generated.resources.original_audio
 import simpmusic.composeapp.generated.resources.other_app
 import simpmusic.composeapp.generated.resources.play_explicit_content
@@ -345,34 +237,16 @@ import simpmusic.composeapp.generated.resources.playback
 import simpmusic.composeapp.generated.resources.player_cache
 import simpmusic.composeapp.generated.resources.preferred_audio_language
 import simpmusic.composeapp.generated.resources.preferred_audio_language_message
-import simpmusic.composeapp.generated.resources.proxy
-import simpmusic.composeapp.generated.resources.proxy_description
-import simpmusic.composeapp.generated.resources.proxy_host
-import simpmusic.composeapp.generated.resources.proxy_host_message
-import simpmusic.composeapp.generated.resources.proxy_password
-import simpmusic.composeapp.generated.resources.proxy_password_message
-import simpmusic.composeapp.generated.resources.proxy_port
-import simpmusic.composeapp.generated.resources.proxy_port_message
-import simpmusic.composeapp.generated.resources.proxy_type
-import simpmusic.composeapp.generated.resources.proxy_username
-import simpmusic.composeapp.generated.resources.proxy_username_message
 import simpmusic.composeapp.generated.resources.quality
 import simpmusic.composeapp.generated.resources.radio_audio_only
 import simpmusic.composeapp.generated.resources.radio_audio_only_description
-import simpmusic.composeapp.generated.resources.requires_android_12
-import simpmusic.composeapp.generated.resources.restore_your_data
-import simpmusic.composeapp.generated.resources.restore_your_saved_data
-import simpmusic.composeapp.generated.resources.rich_presence_info
 import simpmusic.composeapp.generated.resources.save
-import simpmusic.composeapp.generated.resources.save_all_your_playlist_data
 import simpmusic.composeapp.generated.resources.save_playback_state
 import simpmusic.composeapp.generated.resources.save_shuffle_and_repeat_mode
 import simpmusic.composeapp.generated.resources.scrobbling_info
 import simpmusic.composeapp.generated.resources.send_back_listening_data_to_google
-import simpmusic.composeapp.generated.resources.set
 import simpmusic.composeapp.generated.resources.settings
 import simpmusic.composeapp.generated.resources.signed_in
-import simpmusic.composeapp.generated.resources.simpmusic_lyrics
 import simpmusic.composeapp.generated.resources.skip_no_music_part
 import simpmusic.composeapp.generated.resources.skip_silent
 import simpmusic.composeapp.generated.resources.skip_sponsor_part_of_video
@@ -381,49 +255,29 @@ import simpmusic.composeapp.generated.resources.smart_downloads_description
 import simpmusic.composeapp.generated.resources.smart_downloads_needs_local_tracking
 import simpmusic.composeapp.generated.resources.smart_downloads_size
 import simpmusic.composeapp.generated.resources.smart_downloads_size_value
-import simpmusic.composeapp.generated.resources.socks
 import simpmusic.composeapp.generated.resources.sponsorBlock
 import simpmusic.composeapp.generated.resources.sponsor_block_intro
-import simpmusic.composeapp.generated.resources.spotify
 import simpmusic.composeapp.generated.resources.spotify_canvas_cache
-import simpmusic.composeapp.generated.resources.spotify_lyrícs_info
 import simpmusic.composeapp.generated.resources.storage
 import simpmusic.composeapp.generated.resources.sync_follow_to_youtube
 import simpmusic.composeapp.generated.resources.sync_follow_to_youtube_description
 import simpmusic.composeapp.generated.resources.theme
-import simpmusic.composeapp.generated.resources.theme_color
-import simpmusic.composeapp.generated.resources.theme_color_custom
-import simpmusic.composeapp.generated.resources.theme_color_xyz
 import simpmusic.composeapp.generated.resources.theme_follows_xyz_launcher
 import simpmusic.composeapp.generated.resources.xyz_accent
 import simpmusic.composeapp.generated.resources.xyz_accent_follow
 import simpmusic.composeapp.generated.resources.xyz_launcher_not_found
-import simpmusic.composeapp.generated.resources.theme_color_default
-import simpmusic.composeapp.generated.resources.theme_color_wallpaper
 import simpmusic.composeapp.generated.resources.theme_mode_dark
 import simpmusic.composeapp.generated.resources.theme_mode_light
 import simpmusic.composeapp.generated.resources.theme_mode_system
 import simpmusic.composeapp.generated.resources.thumbnail_cache
-import simpmusic.composeapp.generated.resources.translation_language
-import simpmusic.composeapp.generated.resources.translation_language_message
-import simpmusic.composeapp.generated.resources.unknown
 import simpmusic.composeapp.generated.resources.upload_your_listening_history_to_youtube_music_server_it_will_make_yt_music_recommendation_system_better_working_only_if_logged_in
-import simpmusic.composeapp.generated.resources.use_ai_translation
-import simpmusic.composeapp.generated.resources.use_ai_translation_description
 import simpmusic.composeapp.generated.resources.use_your_system_equalizer
 import simpmusic.composeapp.generated.resources.user_interface
 import simpmusic.composeapp.generated.resources.version
 import simpmusic.composeapp.generated.resources.version_format
 import simpmusic.composeapp.generated.resources.warning
-import simpmusic.composeapp.generated.resources.weekly
 import simpmusic.composeapp.generated.resources.what_segments_will_be_skipped
 import simpmusic.composeapp.generated.resources.youtube_account
-import simpmusic.composeapp.generated.resources.youtube_subtitle_language
-import simpmusic.composeapp.generated.resources.youtube_subtitle_language_message
-import simpmusic.composeapp.generated.resources.youtube_transcript
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -439,7 +293,6 @@ fun SettingScreen(
 ) {
     val platformContext = LocalPlatformContext.current
     val localDensity = LocalDensity.current
-    val uriHandler = LocalUriHandler.current
     val coroutineScope = rememberCoroutineScope()
 
     var width by rememberSaveable { mutableIntStateOf(0) }
@@ -451,7 +304,6 @@ fun SettingScreen(
         }
     val appName = stringResource(Res.string.app_name)
 
-    val backupLauncher =
         fileSaverResult(
             "${appName}_${
                 now().format(
@@ -465,7 +317,6 @@ fun SettingScreen(
             }
         }
 
-    val restoreLauncher =
         filePickerResult { uri ->
             uri?.let {
                 viewModel.restore(it.toKmpUri())
@@ -477,7 +328,6 @@ fun SettingScreen(
     // filter would hide it on some hosts.
     val importViewModel: ImportViewModel = koinViewModel()
     val importState by importViewModel.importState.collectAsStateWithLifecycle()
-    val importLauncher =
         filePickerResult { uri ->
             uri?.let {
                 importViewModel.import(it.toKmpUri())
@@ -503,14 +353,7 @@ fun SettingScreen(
     val skipSilent by remember { viewModel.skipSilent.map { it == TRUE } }.collectAsStateWithLifecycle(initialValue = false)
     val savePlaybackState by remember { viewModel.savedPlaybackState.map { it == TRUE } }.collectAsStateWithLifecycle(initialValue = false)
     val killServiceOnExit by remember { viewModel.killServiceOnExit.map { it == TRUE } }.collectAsStateWithLifecycle(initialValue = true)
-    val mainLyricsProvider by viewModel.mainLyricsProvider.collectAsStateWithLifecycle()
-    val lyricsOffsetMs by viewModel.lyricsOffsetMs.collectAsStateWithLifecycle()
-    val youtubeSubtitleLanguage by viewModel.youtubeSubtitleLanguage.collectAsStateWithLifecycle()
     val preferredAudioLanguage by viewModel.preferredAudioLanguage.collectAsStateWithLifecycle()
-    val spotifyLoggedIn by viewModel.spotifyLogIn.collectAsStateWithLifecycle()
-    val spotifyLyrics by viewModel.spotifyLyrics.collectAsStateWithLifecycle()
-    val spotifyCanvas by viewModel.spotifyCanvas.collectAsStateWithLifecycle()
-    val amAnimatedArtwork by viewModel.amAnimatedArtwork.collectAsStateWithLifecycle()
     val enableSponsorBlock by remember { viewModel.sponsorBlockEnabled.map { it == TRUE } }.collectAsStateWithLifecycle(initialValue = false)
     val skipSegments by viewModel.sponsorBlockCategories.collectAsStateWithLifecycle()
     val playerCache by viewModel.cacheSize.collectAsStateWithLifecycle()
@@ -519,45 +362,14 @@ fun SettingScreen(
     val canvasCache by viewModel.canvasCacheSize.collectAsStateWithLifecycle()
     val limitPlayerCache by viewModel.playerCacheLimit.collectAsStateWithLifecycle()
     val fraction by viewModel.fraction.collectAsStateWithLifecycle()
-    val lastCheckUpdate by viewModel.lastCheckForUpdate.collectAsStateWithLifecycle()
     val explicitContentEnabled by viewModel.explicitContentEnabled.collectAsStateWithLifecycle()
-    val usingProxy by viewModel.usingProxy.collectAsStateWithLifecycle()
-    val proxyType by viewModel.proxyType.collectAsStateWithLifecycle()
-    val proxyHost by viewModel.proxyHost.collectAsStateWithLifecycle()
-    val proxyPort by viewModel.proxyPort.collectAsStateWithLifecycle()
-    val proxyUsername by viewModel.proxyUsername.collectAsStateWithLifecycle()
-    val proxyPassword by viewModel.proxyPassword.collectAsStateWithLifecycle()
-    val aiProvider by viewModel.aiProvider.collectAsStateWithLifecycle()
-    val isHasApiKey by viewModel.isHasApiKey.collectAsStateWithLifecycle()
-    val useAITranslation by viewModel.useAITranslation.collectAsStateWithLifecycle()
-    val translationLanguage by viewModel.translationLanguage.collectAsStateWithLifecycle()
-    val customModelId by viewModel.customModelId.collectAsStateWithLifecycle()
-    val customOpenAIBaseUrl by viewModel.customOpenAIBaseUrl.collectAsStateWithLifecycle()
-    val customOpenAIHeaders by viewModel.customOpenAIHeaders.collectAsStateWithLifecycle()
-    val localNetworkPermission = rememberLocalNetworkPermission()
-    val helpBuildLyricsDatabase by viewModel.helpBuildLyricsDatabase.collectAsStateWithLifecycle()
-    val contributor by viewModel.contributor.collectAsStateWithLifecycle()
-    val backupDownloaded by viewModel.backupDownloaded.collectAsStateWithLifecycle()
-    val autoBackupEnabled by viewModel.autoBackupEnabled.collectAsStateWithLifecycle()
-    val autoBackupFrequency by viewModel.autoBackupFrequency.collectAsStateWithLifecycle()
-    val autoBackupMaxFiles by viewModel.autoBackupMaxFiles.collectAsStateWithLifecycle()
-    val autoBackupLastTime by viewModel.autoBackupLastTime.collectAsStateWithLifecycle()
     val themeMode by sharedViewModel.getThemeMode().collectAsStateWithLifecycle(DataStoreManager.THEME_MODE_DARK)
-    val themeColorSource by sharedViewModel.getThemeColorSource().collectAsStateWithLifecycle(DataStoreManager.THEME_COLOR_DEFAULT)
-    val customThemeColorHex by sharedViewModel.getCustomThemeColor().collectAsStateWithLifecycle(DataStoreManager.DEFAULT_THEME_COLOR_HEX)
     val storedXyzAccent by sharedViewModel.getXyzAccent().collectAsStateWithLifecycle(null)
     val xyzAccent = xyzAccentSettingOrDefault(storedXyzAccent, canFollowXyzLauncher())
     // Provided by AppTheme: tells whether the launcher actually answered, i.e. whether day/night is its call.
     val xyzPalette = LocalXyzPalette.current
-    val isXyzLook = themeColorSource == THEME_COLOR_XYZ
     val followsLauncherDayNight =
-        themeColorSource == THEME_COLOR_XYZ && xyzAccent == XYZ_ACCENT_FOLLOW && xyzPalette?.fromLauncher == true
-    val nowPlayingStyle by sharedViewModel.getNowPlayingStyle().collectAsStateWithLifecycle(DataStoreManager.NOW_PLAYING_STYLE_SPOTIFY)
-    val lyricsStyle by sharedViewModel.getLyricsStyle().collectAsStateWithLifecycle(DataStoreManager.LYRICS_STYLE_CLASSIC)
-    val romanizationStored by sharedViewModel.getRomanizationLanguages().collectAsStateWithLifecycle("")
-    val japaneseDictionaryState by viewModel.japaneseDictionaryState.collectAsStateWithLifecycle()
-    var showColorPickerDialog by rememberSaveable { mutableStateOf(false) }
-    val discordLoggedIn by viewModel.discordLoggedIn.collectAsStateWithLifecycle()
+        xyzAccent == XYZ_ACCENT_FOLLOW && xyzPalette?.fromLauncher == true
     val loggedIn by viewModel.loggedIn.collectAsStateWithLifecycle()
     val syncFollowToYouTube by viewModel.syncFollowToYouTube.collectAsStateWithLifecycle()
     val equalizerEnabled by viewModel.equalizerEnabled.collectAsStateWithLifecycle()
@@ -565,7 +377,6 @@ fun SettingScreen(
     val lastfmLoggedIn by viewModel.lastfmLoggedIn.collectAsStateWithLifecycle()
     val lastfmUsername by viewModel.lastfmUsername.collectAsStateWithLifecycle()
     val lastfmScrobbleEnabled by viewModel.lastfmScrobbleEnabled.collectAsStateWithLifecycle()
-    val richPresenceEnabled by viewModel.richPresenceEnabled.collectAsStateWithLifecycle()
 
     val crossfadeEnabled by viewModel.crossfadeEnabled.collectAsStateWithLifecycle()
     val crossfadeDuration by viewModel.crossfadeDuration.collectAsStateWithLifecycle()
@@ -573,7 +384,6 @@ fun SettingScreen(
     val crossfadeSkipAlbum by viewModel.crossfadeSkipAlbum.collectAsStateWithLifecycle()
     val castState by viewModel.castState.collectAsStateWithLifecycle()
 
-    val isCheckingUpdate by sharedViewModel.isCheckingUpdate.collectAsStateWithLifecycle()
 
     val hazeState =
         rememberHazeState()
@@ -684,186 +494,36 @@ fun SettingScreen(
                             )
                         },
                     )
-                    // The XYZ look has no lyrics and no other player: its Home is the player.
-                    if (!isXyzLook) {
-                        // The Apple Music treatments ARE the blur — the frosted page behind the player, and
-                        // the depth of field on the lyrics — and Modifier.blur is a documented no-op below
-                        // Android 12, so on an older device they render as a flat, wrong-looking version of
-                        // themselves. The requirement is spelled out on the option itself rather than left
-                        // for the user to discover after switching.
-                        val requiresAndroid12 = " (" + stringResource(Res.string.requires_android_12) + ")"
-                        val nowPlayingStyleLabels =
-                            listOf(
-                                DataStoreManager.NOW_PLAYING_STYLE_SPOTIFY to stringResource(Res.string.now_playing_style_spotify),
-                                DataStoreManager.NOW_PLAYING_STYLE_M3_EXPRESSIVE to stringResource(Res.string.now_playing_style_m3_expressive),
-                                DataStoreManager.NOW_PLAYING_STYLE_APPLE_MUSIC to
-                                    stringResource(Res.string.now_playing_style_apple_music) + requiresAndroid12,
-                            )
-                        SettingItem(
-                            title = stringResource(Res.string.now_playing_style),
-                            subtitle = nowPlayingStyleLabels.firstOrNull { it.first == nowPlayingStyle }?.second ?: "",
-                            onClick = {
-                                viewModel.setAlertData(
-                                    SettingAlertState(
-                                        title = runBlocking { getString(Res.string.now_playing_style) },
-                                        selectOne =
-                                            SettingAlertState.SelectData(
-                                                listSelect = nowPlayingStyleLabels.map { (it.first == nowPlayingStyle) to it.second },
-                                            ),
-                                        confirm =
-                                            runBlocking { getString(Res.string.change) } to { state ->
-                                                val selected = state.selectOne?.getSelected()
-                                                nowPlayingStyleLabels.firstOrNull { it.second == selected }?.first?.let {
-                                                    sharedViewModel.setNowPlayingStyle(it)
-                                                }
-                                            },
-                                        dismiss = runBlocking { getString(Res.string.cancel) },
-                                    ),
-                                )
-                            },
-                        )
-                        // Hidden outright below Android 12 rather than offered with one option: the Apple
-                        // Music treatment IS the blur, and Modifier.blur is a documented no-op there, so
-                        // the choice would be between Classic and a broken-looking Classic.
-                        if (isLyricsBlurSupported()) {
-                            val lyricsStyleLabels =
-                                listOf(
-                                    DataStoreManager.LYRICS_STYLE_CLASSIC to stringResource(Res.string.lyrics_style_classic),
-                                    DataStoreManager.LYRICS_STYLE_APPLE_MUSIC to
-                                        stringResource(Res.string.lyrics_style_apple_music) + requiresAndroid12,
-                                )
-                            SettingItem(
-                                title = stringResource(Res.string.lyrics_style),
-                                subtitle = lyricsStyleLabels.firstOrNull { it.first == lyricsStyle }?.second ?: "",
-                                onClick = {
-                                    viewModel.setAlertData(
-                                        SettingAlertState(
-                                            title = runBlocking { getString(Res.string.lyrics_style) },
-                                            selectOne =
-                                                SettingAlertState.SelectData(
-                                                    listSelect = lyricsStyleLabels.map { (it.first == lyricsStyle) to it.second },
-                                                ),
-                                            confirm =
-                                                runBlocking { getString(Res.string.change) } to { state ->
-                                                    val selected = state.selectOne?.getSelected()
-                                                    lyricsStyleLabels.firstOrNull { it.second == selected }?.first?.let {
-                                                        sharedViewModel.setLyricsStyle(it)
-                                                    }
-                                                },
-                                            dismiss = runBlocking { getString(Res.string.cancel) },
-                                        ),
-                                    )
-                                },
-                            )
-                        }
-
-                        // Independent of BOTH style settings, and not gated on Android 12: this changes
-                        // what the words SAY, not how they are drawn, so it applies to every style on
-                        // every version. Sits next to them because a user looking for "something about
-                        // lyrics" looks in one place.
-                        val romanizationLabels =
-                            listOf(
-                                RomanizationLanguage.JAPANESE to stringResource(Res.string.romanization_japanese),
-                                RomanizationLanguage.KOREAN to stringResource(Res.string.romanization_korean),
-                                RomanizationLanguage.CHINESE to stringResource(Res.string.romanization_chinese),
-                                RomanizationLanguage.HINDI to stringResource(Res.string.romanization_hindi),
-                                RomanizationLanguage.PUNJABI to stringResource(Res.string.romanization_punjabi),
-                                RomanizationLanguage.RUSSIAN to stringResource(Res.string.romanization_russian),
-                                RomanizationLanguage.UKRAINIAN to stringResource(Res.string.romanization_ukrainian),
-                                RomanizationLanguage.SERBIAN to stringResource(Res.string.romanization_serbian),
-                                RomanizationLanguage.BULGARIAN to stringResource(Res.string.romanization_bulgarian),
-                                RomanizationLanguage.BELARUSIAN to stringResource(Res.string.romanization_belarusian),
-                                RomanizationLanguage.KYRGYZ to stringResource(Res.string.romanization_kyrgyz),
-                                RomanizationLanguage.MACEDONIAN to stringResource(Res.string.romanization_macedonian),
-                            )
-                        val romanizationSelected = RomanizationLanguage.parse(romanizationStored)
-                        SettingItem(
-                            title = stringResource(Res.string.lyrics_romanization),
-                            // Two different jobs for one line. Off, the row has to explain what the
-                            // feature IS — nobody guesses "romanization" from the title alone. On, the only
-                            // question worth answering at a glance is which of the twelve are picked, and
-                            // the explanation has served its purpose.
-                            subtitle =
-                                if (romanizationSelected.isEmpty()) {
-                                    stringResource(Res.string.lyrics_romanization_description)
-                                } else {
-                                    val selectedNames =
-                                        romanizationLabels.filter { it.first in romanizationSelected }.joinToString(", ") { it.second }
-                                    // Japanese is the one language with a dictionary pack to fetch; while
-                                    // that is in flight — or has failed — the row says so, instead of
-                                    // listing Japanese as if it were already live.
-                                    when {
-                                        RomanizationLanguage.JAPANESE !in romanizationSelected -> selectedNames
-                                        japaneseDictionaryState == RomanizationDictionaryState.DOWNLOADING ->
-                                            "$selectedNames — ${stringResource(Res.string.romanization_japanese_dict_downloading)}"
-                                        japaneseDictionaryState == RomanizationDictionaryState.FAILED ->
-                                            "$selectedNames — ${stringResource(Res.string.romanization_japanese_dict_failed)}"
-                                        else -> selectedNames
-                                    }
-                                },
-                            onClick = {
-                                viewModel.setAlertData(
-                                    SettingAlertState(
-                                        title = runBlocking { getString(Res.string.lyrics_romanization) },
-                                        // NO `message` here, deliberately. The dialog picks its body with
-                                        // an if/else-if chain that tests `message` FIRST, and that branch
-                                        // renders only the text and an optional textField — a multipleSelect
-                                        // passed alongside it is never reached, so the dialog came up with
-                                        // the description and no languages at all.
-                                        multipleSelect =
-                                            SettingAlertState.SelectData(
-                                                listSelect =
-                                                    romanizationLabels.map { (language, label) ->
-                                                        (language in romanizationSelected) to label
-                                                    },
-                                            ),
-                                        confirm =
-                                            runBlocking { getString(Res.string.save) } to { state ->
-                                                val chosen = state.multipleSelect?.getListSelected().orEmpty()
-                                                val languages =
-                                                    romanizationLabels.filter { it.second in chosen }.map { it.first }.toSet()
-                                                sharedViewModel.setRomanizationLanguages(languages)
-                                                // Japanese needs its dictionary pack on disk. A no-op when
-                                                // it is already there (or bundled, as on Desktop) — and the
-                                                // retry after a FAILED attempt is simply confirming again.
-                                                if (RomanizationLanguage.JAPANESE in languages) {
-                                                    viewModel.downloadJapaneseDictionaryIfNeeded()
-                                                }
-                                            },
-                                        dismiss = runBlocking { getString(Res.string.cancel) },
-                                    ),
-                                )
-                            },
-                        )
-                    }
-                    val colorSourceLabels =
+                    val accentLabels =
                         buildList {
-                            add(THEME_COLOR_XYZ to stringResource(Res.string.theme_color_xyz))
-                            add(DataStoreManager.THEME_COLOR_DEFAULT to stringResource(Res.string.theme_color_default))
-                            if (isWallpaperDynamicColorSupported()) {
-                                add(DataStoreManager.THEME_COLOR_WALLPAPER to stringResource(Res.string.theme_color_wallpaper))
-                            }
-                            add(DataStoreManager.THEME_COLOR_CUSTOM to stringResource(Res.string.theme_color_custom))
+                            if (canFollowXyzLauncher()) add(XYZ_ACCENT_FOLLOW to stringResource(Res.string.xyz_accent_follow))
+                            XyzAccents.forEachIndexed { index, accent -> add(index.toString() to stringResource(accent.name)) }
                         }
+                    val fallbackAccentName = stringResource(XyzAccents[xyzAccentIndex(xyzAccent)].name)
                     SettingItem(
-                        title = stringResource(Res.string.theme_color),
-                        subtitle = colorSourceLabels.firstOrNull { it.first == themeColorSource }?.second ?: "",
+                        title = stringResource(Res.string.xyz_accent),
+                        subtitle =
+                            when {
+                                xyzAccent != XYZ_ACCENT_FOLLOW -> accentLabels.firstOrNull { it.first == xyzAccent }?.second ?: ""
+                                xyzPalette != null && xyzPalette.fromLauncher ->
+                                    stringResource(Res.string.xyz_accent_follow) + " · " +
+                                        stringResource(XyzAccents[xyzPalette.accentIndex].name)
+                                else -> stringResource(Res.string.xyz_launcher_not_found, fallbackAccentName)
+                            },
+                        smallSubtitle = true,
                         onClick = {
                             viewModel.setAlertData(
                                 SettingAlertState(
-                                    title = runBlocking { getString(Res.string.theme_color) },
+                                    title = runBlocking { getString(Res.string.xyz_accent) },
                                     selectOne =
                                         SettingAlertState.SelectData(
-                                            listSelect = colorSourceLabels.map { (it.first == themeColorSource) to it.second },
+                                            listSelect = accentLabels.map { (it.first == xyzAccent) to it.second },
                                         ),
                                     confirm =
                                         runBlocking { getString(Res.string.change) } to { state ->
                                             val selected = state.selectOne?.getSelected()
-                                            colorSourceLabels.firstOrNull { it.second == selected }?.first?.let {
-                                                sharedViewModel.setThemeColorSource(it)
-                                                if (it == DataStoreManager.THEME_COLOR_CUSTOM) {
-                                                    showColorPickerDialog = true
-                                                }
+                                            accentLabels.firstOrNull { it.second == selected }?.first?.let {
+                                                sharedViewModel.setXyzAccent(it)
                                             }
                                         },
                                     dismiss = runBlocking { getString(Res.string.cancel) },
@@ -871,53 +531,7 @@ fun SettingScreen(
                             )
                         },
                     )
-                    if (themeColorSource == THEME_COLOR_XYZ) {
-                        val accentLabels =
-                            buildList {
-                                if (canFollowXyzLauncher()) add(XYZ_ACCENT_FOLLOW to stringResource(Res.string.xyz_accent_follow))
-                                XyzAccents.forEachIndexed { index, accent -> add(index.toString() to stringResource(accent.name)) }
-                            }
-                        val fallbackAccentName = stringResource(XyzAccents[xyzAccentIndex(xyzAccent)].name)
-                        SettingItem(
-                            title = stringResource(Res.string.xyz_accent),
-                            subtitle =
-                                when {
-                                    xyzAccent != XYZ_ACCENT_FOLLOW -> accentLabels.firstOrNull { it.first == xyzAccent }?.second ?: ""
-                                    xyzPalette != null && xyzPalette.fromLauncher ->
-                                        stringResource(Res.string.xyz_accent_follow) + " · " +
-                                            stringResource(XyzAccents[xyzPalette.accentIndex].name)
-                                    else -> stringResource(Res.string.xyz_launcher_not_found, fallbackAccentName)
-                                },
-                            smallSubtitle = true,
-                            onClick = {
-                                viewModel.setAlertData(
-                                    SettingAlertState(
-                                        title = runBlocking { getString(Res.string.xyz_accent) },
-                                        selectOne =
-                                            SettingAlertState.SelectData(
-                                                listSelect = accentLabels.map { (it.first == xyzAccent) to it.second },
-                                            ),
-                                        confirm =
-                                            runBlocking { getString(Res.string.change) } to { state ->
-                                                val selected = state.selectOne?.getSelected()
-                                                accentLabels.firstOrNull { it.second == selected }?.first?.let {
-                                                    sharedViewModel.setXyzAccent(it)
-                                                }
-                                            },
-                                        dismiss = runBlocking { getString(Res.string.cancel) },
-                                    ),
-                                )
-                            },
-                        )
-                    }
-                    if (themeColorSource == DataStoreManager.THEME_COLOR_CUSTOM) {
-                        SettingItem(
-                            title = stringResource(Res.string.custom_color),
-                            subtitle = "#${customThemeColorHex.takeLast(6)}",
-                            smallSubtitle = true,
-                            onClick = { showColorPickerDialog = true },
-                        )
-                    }
+                
                 }
             }
         }
@@ -1162,175 +776,6 @@ fun SettingScreen(
                     switch = (combineLocalAndYouTubeLiked to { viewModel.setCombineLocalAndYouTubeLiked(it) })
                 )
                  */
-                // No proxy in the XYZ look.
-                if (!isXyzLook) {
-                    SettingItem(
-                        title = stringResource(Res.string.proxy),
-                        subtitle = stringResource(Res.string.proxy_description),
-                        switch = (usingProxy to { viewModel.setUsingProxy(it) }),
-                    )
-                    Crossfade(usingProxy) { it ->
-                        if (it) {
-                            Column {
-                                SettingItem(
-                                    title = stringResource(Res.string.proxy_type),
-                                    subtitle =
-                                        when (proxyType) {
-                                            DataStoreManager.ProxyType.PROXY_TYPE_HTTP -> stringResource(Res.string.http)
-                                            DataStoreManager.ProxyType.PROXY_TYPE_SOCKS -> stringResource(Res.string.socks)
-                                        },
-                                    onClick = {
-                                        viewModel.setAlertData(
-                                            SettingAlertState(
-                                                title = runBlocking { getString(Res.string.proxy_type) },
-                                                selectOne =
-                                                    SettingAlertState.SelectData(
-                                                        listSelect =
-                                                            listOf(
-                                                                (proxyType == DataStoreManager.ProxyType.PROXY_TYPE_HTTP) to
-                                                                    runBlocking {
-                                                                        getString(
-                                                                            Res.string.http,
-                                                                        )
-                                                                    },
-                                                                (proxyType == DataStoreManager.ProxyType.PROXY_TYPE_SOCKS) to
-                                                                    runBlocking { getString(Res.string.socks) },
-                                                            ),
-                                                    ),
-                                                confirm =
-                                                    runBlocking { getString(Res.string.change) } to { state ->
-                                                        viewModel.setProxy(
-                                                            if (state.selectOne?.getSelected() == runBlocking { getString(Res.string.socks) }) {
-                                                                DataStoreManager.ProxyType.PROXY_TYPE_SOCKS
-                                                            } else {
-                                                                DataStoreManager.ProxyType.PROXY_TYPE_HTTP
-                                                            },
-                                                            proxyHost,
-                                                            proxyPort,
-                                                        )
-                                                    },
-                                                dismiss = runBlocking { getString(Res.string.cancel) },
-                                            ),
-                                        )
-                                    },
-                                )
-                                SettingItem(
-                                    title = stringResource(Res.string.proxy_host),
-                                    subtitle = proxyHost,
-                                    onClick = {
-                                        viewModel.setAlertData(
-                                            SettingAlertState(
-                                                title = runBlocking { getString(Res.string.proxy_host) },
-                                                message = runBlocking { getString(Res.string.proxy_host_message) },
-                                                textField =
-                                                    SettingAlertState.TextFieldData(
-                                                        label = runBlocking { getString(Res.string.proxy_host) },
-                                                        value = proxyHost,
-                                                        verifyCodeBlock = {
-                                                            isValidProxyHost(it) to runBlocking { getString(Res.string.invalid_host) }
-                                                        },
-                                                    ),
-                                                confirm =
-                                                    runBlocking { getString(Res.string.change) } to { state ->
-                                                        viewModel.setProxy(
-                                                            proxyType,
-                                                            state.textField?.value ?: "",
-                                                            proxyPort,
-                                                        )
-                                                    },
-                                                dismiss = runBlocking { getString(Res.string.cancel) },
-                                            ),
-                                        )
-                                    },
-                                )
-                                SettingItem(
-                                    title = stringResource(Res.string.proxy_port),
-                                    subtitle = proxyPort.toString(),
-                                    onClick = {
-                                        viewModel.setAlertData(
-                                            SettingAlertState(
-                                                title = runBlocking { getString(Res.string.proxy_port) },
-                                                message = runBlocking { getString(Res.string.proxy_port_message) },
-                                                textField =
-                                                    SettingAlertState.TextFieldData(
-                                                        label = runBlocking { getString(Res.string.proxy_port) },
-                                                        value = proxyPort.toString(),
-                                                        verifyCodeBlock = {
-                                                            (it.toIntOrNull() != null) to runBlocking { getString(Res.string.invalid_port) }
-                                                        },
-                                                    ),
-                                                confirm =
-                                                    runBlocking { getString(Res.string.change) } to { state ->
-                                                        viewModel.setProxy(
-                                                            proxyType,
-                                                            proxyHost,
-                                                            state.textField?.value?.toIntOrNull() ?: 0,
-                                                        )
-                                                    },
-                                                dismiss = runBlocking { getString(Res.string.cancel) },
-                                            ),
-                                        )
-                                    },
-                                )
-                                SettingItem(
-                                    title = stringResource(Res.string.proxy_username),
-                                    subtitle = proxyUsername,
-                                    onClick = {
-                                        viewModel.setAlertData(
-                                            SettingAlertState(
-                                                title = runBlocking { getString(Res.string.proxy_username) },
-                                                message = runBlocking { getString(Res.string.proxy_username_message) },
-                                                textField =
-                                                    SettingAlertState.TextFieldData(
-                                                        label = runBlocking { getString(Res.string.proxy_username) },
-                                                        value = proxyUsername,
-                                                    ),
-                                                confirm =
-                                                    runBlocking { getString(Res.string.change) } to { state ->
-                                                        viewModel.setProxyCredentials(
-                                                            state.textField?.value ?: "",
-                                                            proxyPassword,
-                                                        )
-                                                    },
-                                                dismiss = runBlocking { getString(Res.string.cancel) },
-                                            ),
-                                        )
-                                    },
-                                )
-                                SettingItem(
-                                    title = stringResource(Res.string.proxy_password),
-                                    subtitle =
-                                        if (proxyPassword.isEmpty()) {
-                                            ""
-                                        } else {
-                                            "\u2022".repeat(proxyPassword.length)
-                                        },
-                                    onClick = {
-                                        viewModel.setAlertData(
-                                            SettingAlertState(
-                                                title = runBlocking { getString(Res.string.proxy_password) },
-                                                message = runBlocking { getString(Res.string.proxy_password_message) },
-                                                textField =
-                                                    SettingAlertState.TextFieldData(
-                                                        label = runBlocking { getString(Res.string.proxy_password) },
-                                                        value = proxyPassword,
-                                                    ),
-                                                confirm =
-                                                    runBlocking { getString(Res.string.change) } to { state ->
-                                                        viewModel.setProxyCredentials(
-                                                            proxyUsername,
-                                                            state.textField?.value ?: "",
-                                                        )
-                                                    },
-                                                dismiss = runBlocking { getString(Res.string.cancel) },
-                                            ),
-                                        )
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
             }
         }
         if (getPlatform() == Platform.Android) {
@@ -1562,482 +1007,6 @@ fun SettingScreen(
                         )
                     },
                 )
-            }
-        }
-        if (!isXyzLook) {
-            item(key = "lyrics") {
-                SettingGroup(title = stringResource(Res.string.lyrics)) {
-                    SettingItem(
-                        title = stringResource(Res.string.main_lyrics_provider),
-                        subtitle =
-                            when (mainLyricsProvider) {
-                                DataStoreManager.SIMPMUSIC -> stringResource(Res.string.simpmusic_lyrics)
-                                DataStoreManager.YOUTUBE -> stringResource(Res.string.youtube_transcript)
-                                DataStoreManager.LRCLIB -> stringResource(Res.string.lrclib)
-                                DataStoreManager.BETTER_LYRICS -> stringResource(Res.string.better_lyrics)
-                                else -> stringResource(Res.string.unknown)
-                            },
-                        onClick = {
-                            viewModel.setAlertData(
-                                SettingAlertState(
-                                    title = runBlocking { getString(Res.string.main_lyrics_provider) },
-                                    selectOne =
-                                        SettingAlertState.SelectData(
-                                            listSelect =
-                                                listOf(
-                                                    (mainLyricsProvider == DataStoreManager.SIMPMUSIC) to
-                                                        runBlocking { getString(Res.string.simpmusic_lyrics) },
-                                                    (mainLyricsProvider == DataStoreManager.YOUTUBE) to
-                                                        runBlocking { getString(Res.string.youtube_transcript) },
-                                                    (mainLyricsProvider == DataStoreManager.LRCLIB) to runBlocking { getString(Res.string.lrclib) },
-                                                    (mainLyricsProvider == DataStoreManager.BETTER_LYRICS) to
-                                                        runBlocking { getString(Res.string.better_lyrics) },
-                                                ),
-                                        ),
-                                    confirm =
-                                        runBlocking { getString(Res.string.change) } to { state ->
-                                            viewModel.setLyricsProvider(
-                                                when (state.selectOne?.getSelected()) {
-                                                    runBlocking { getString(Res.string.simpmusic_lyrics) } -> DataStoreManager.SIMPMUSIC
-                                                    runBlocking { getString(Res.string.youtube_transcript) } -> DataStoreManager.YOUTUBE
-                                                    runBlocking { getString(Res.string.lrclib) } -> DataStoreManager.LRCLIB
-                                                    runBlocking { getString(Res.string.better_lyrics) } -> DataStoreManager.BETTER_LYRICS
-                                                    else -> DataStoreManager.SIMPMUSIC
-                                                },
-                                            )
-                                        },
-                                    dismiss = runBlocking { getString(Res.string.cancel) },
-                                ),
-                            )
-                        },
-                    )
-
-                    SettingItem(
-                        title = stringResource(Res.string.lyrics_offset),
-                        subtitle =
-                            stringResource(
-                                Res.string.lyrics_offset_value,
-                                if (lyricsOffsetMs > 0) "+$lyricsOffsetMs" else lyricsOffsetMs.toString(),
-                            ),
-                        onClick = {
-                            viewModel.setAlertData(
-                                SettingAlertState(
-                                    title = runBlocking { getString(Res.string.lyrics_offset) },
-                                    // The dialog renders its text field INSIDE the `message != null`
-                                    // branch, so a state carrying a textField and no message opens an
-                                    // empty box with no error anywhere.
-                                    message = runBlocking { getString(Res.string.lyrics_offset_message) },
-                                    textField =
-                                        SettingAlertState.TextFieldData(
-                                            label = runBlocking { getString(Res.string.lyrics_offset) },
-                                            value = lyricsOffsetMs.toString(),
-                                            // Only that it is a whole number — no range. How far a
-                                            // listener's own audio path lags is theirs to say.
-                                            verifyCodeBlock = {
-                                                (it.trim().toIntOrNull() != null) to
-                                                    runBlocking { getString(Res.string.lyrics_offset_invalid) }
-                                            },
-                                        ),
-                                    confirm =
-                                        runBlocking { getString(Res.string.change) } to { state ->
-                                            state.textField
-                                                ?.value
-                                                ?.trim()
-                                                ?.toIntOrNull()
-                                                ?.let { viewModel.setLyricsOffsetMs(it) }
-                                        },
-                                    dismiss = runBlocking { getString(Res.string.cancel) },
-                                ),
-                            )
-                        },
-                    )
-
-                    SettingItem(
-                        title = stringResource(Res.string.translation_language),
-                        subtitle = translationLanguage ?: "",
-                        onClick = {
-                            viewModel.setAlertData(
-                                SettingAlertState(
-                                    title = runBlocking { getString(Res.string.translation_language) },
-                                    textField =
-                                        SettingAlertState.TextFieldData(
-                                            label = runBlocking { getString(Res.string.translation_language) },
-                                            value = translationLanguage ?: "",
-                                            verifyCodeBlock = {
-                                                (it.length == 2 && it.isTwoLetterCode()) to
-                                                    runBlocking { getString(Res.string.invalid_language_code) }
-                                            },
-                                        ),
-                                    message = runBlocking { getString(Res.string.translation_language_message) },
-                                    confirm =
-                                        runBlocking { getString(Res.string.change) } to { state ->
-                                            viewModel.setTranslationLanguage(state.textField?.value ?: "")
-                                        },
-                                    dismiss = runBlocking { getString(Res.string.cancel) },
-                                ),
-                            )
-                        },
-                        isEnable = true,
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.youtube_subtitle_language),
-                        subtitle = youtubeSubtitleLanguage,
-                        onClick = {
-                            viewModel.setAlertData(
-                                SettingAlertState(
-                                    title = runBlocking { getString(Res.string.youtube_subtitle_language) },
-                                    textField =
-                                        SettingAlertState.TextFieldData(
-                                            label = runBlocking { getString(Res.string.youtube_subtitle_language) },
-                                            value = youtubeSubtitleLanguage,
-                                            verifyCodeBlock = {
-                                                (it.length == 2 && it.isTwoLetterCode()) to
-                                                    runBlocking { getString(Res.string.invalid_language_code) }
-                                            },
-                                        ),
-                                    message = runBlocking { getString(Res.string.youtube_subtitle_language_message) },
-                                    confirm =
-                                        runBlocking { getString(Res.string.change) } to { state ->
-                                            viewModel.setYoutubeSubtitleLanguage(state.textField?.value ?: "")
-                                        },
-                                    dismiss = runBlocking { getString(Res.string.cancel) },
-                                ),
-                            )
-                        },
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.help_build_lyrics_database),
-                        subtitle = stringResource(Res.string.help_build_lyrics_database_description),
-                        switch = (helpBuildLyricsDatabase to { viewModel.setHelpBuildLyricsDatabase(it) }),
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.contributor_name),
-                        subtitle = contributor.first.ifEmpty { stringResource(Res.string.anonymous) },
-                        isEnable = helpBuildLyricsDatabase,
-                        onClick = {
-                            viewModel.setAlertData(
-                                SettingAlertState(
-                                    title = runBlocking { getString(Res.string.contributor_name) },
-                                    textField =
-                                        SettingAlertState.TextFieldData(
-                                            label = runBlocking { getString(Res.string.contributor_name) },
-                                            value = "",
-                                        ),
-                                    message = "",
-                                    confirm =
-                                        runBlocking { getString(Res.string.set) } to { state ->
-                                            viewModel.setContributorName(state.textField?.value ?: "")
-                                        },
-                                    dismiss = runBlocking { getString(Res.string.cancel) },
-                                ),
-                            )
-                        },
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.contributor_email),
-                        subtitle = contributor.second.ifEmpty { stringResource(Res.string.anonymous) },
-                        isEnable = helpBuildLyricsDatabase,
-                        onClick = {
-                            viewModel.setAlertData(
-                                SettingAlertState(
-                                    title = runBlocking { getString(Res.string.contributor_email) },
-                                    textField =
-                                        SettingAlertState.TextFieldData(
-                                            label = runBlocking { getString(Res.string.contributor_email) },
-                                            value = "",
-                                            verifyCodeBlock = {
-                                                if (it.isNotEmpty()) {
-                                                    (it.contains("@")) to runBlocking { getString(Res.string.invalid) }
-                                                } else {
-                                                    true to ""
-                                                }
-                                            },
-                                        ),
-                                    message = "",
-                                    confirm =
-                                        runBlocking { getString(Res.string.set) } to { state ->
-                                            viewModel.setContributorEmail(state.textField?.value ?: "")
-                                        },
-                                    dismiss = runBlocking { getString(Res.string.cancel) },
-                                ),
-                            )
-                        },
-                    )
-                }
-            }
-        }
-        // No AI in the XYZ look (its provider, keys and lyrics translation).
-        if (!isXyzLook) {
-            item(key = "AI") {
-                SettingGroup(title = stringResource(Res.string.ai)) {
-                    SettingItem(
-                        title = stringResource(Res.string.ai_provider),
-                        subtitle =
-                            when (aiProvider) {
-                                DataStoreManager.AI_PROVIDER_OPENAI -> stringResource(Res.string.openai)
-                                DataStoreManager.AI_PROVIDER_GEMINI -> stringResource(Res.string.gemini)
-                                DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI -> stringResource(Res.string.openai_api_compatible)
-                                else -> stringResource(Res.string.unknown)
-                            },
-                        onClick = {
-                            viewModel.setAlertData(
-                                SettingAlertState(
-                                    title = runBlocking { getString(Res.string.ai_provider) },
-                                    selectOne =
-                                        SettingAlertState.SelectData(
-                                            listSelect =
-                                                listOf(
-                                                    (mainLyricsProvider == DataStoreManager.AI_PROVIDER_OPENAI) to
-                                                        runBlocking { getString(Res.string.openai) },
-                                                    (mainLyricsProvider == DataStoreManager.AI_PROVIDER_GEMINI) to
-                                                        runBlocking { getString(Res.string.gemini) },
-                                                    (mainLyricsProvider == DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI) to
-                                                        runBlocking { getString(Res.string.openai_api_compatible) },
-                                                ),
-                                        ),
-                                    confirm =
-                                        runBlocking { getString(Res.string.change) } to { state ->
-                                            viewModel.setAIProvider(
-                                                when (state.selectOne?.getSelected()) {
-                                                    runBlocking { getString(Res.string.openai) } -> DataStoreManager.AI_PROVIDER_OPENAI
-                                                    runBlocking { getString(Res.string.gemini) } -> DataStoreManager.AI_PROVIDER_GEMINI
-                                                    runBlocking {
-                                                        getString(
-                                                            Res.string.openai_api_compatible,
-                                                        )
-                                                    },
-                                                    -> DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI
-
-                                                    else -> DataStoreManager.AI_PROVIDER_OPENAI
-                                                },
-                                            )
-                                        },
-                                    dismiss = runBlocking { getString(Res.string.cancel) },
-                                ),
-                            )
-                        },
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.ai_api_key),
-                        subtitle = if (isHasApiKey) "XXXXXXXXXX" else "N/A",
-                        onClick = {
-                            viewModel.setAlertData(
-                                SettingAlertState(
-                                    title = runBlocking { getString(Res.string.ai_api_key) },
-                                    textField =
-                                        SettingAlertState.TextFieldData(
-                                            label = runBlocking { getString(Res.string.ai_api_key) },
-                                            value = "",
-                                            verifyCodeBlock = {
-                                                (it.isNotEmpty()) to runBlocking { getString(Res.string.invalid_api_key) }
-                                            },
-                                        ),
-                                    message = "",
-                                    confirm =
-                                        runBlocking { getString(Res.string.set) } to { state ->
-                                            viewModel.setAIApiKey(state.textField?.value ?: "")
-                                        },
-                                    dismiss = runBlocking { getString(Res.string.cancel) },
-                                ),
-                            )
-                        },
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.custom_ai_model_id),
-                        subtitle = customModelId.ifEmpty { stringResource(Res.string.default_models) },
-                        onClick = {
-                            viewModel.setAlertData(
-                                SettingAlertState(
-                                    title = runBlocking { getString(Res.string.custom_ai_model_id) },
-                                    textField =
-                                        SettingAlertState.TextFieldData(
-                                            label = runBlocking { getString(Res.string.custom_ai_model_id) },
-                                            value = "",
-                                            verifyCodeBlock = {
-                                                (it.isNotEmpty() && !it.contains(" ")) to runBlocking { getString(Res.string.invalid) }
-                                            },
-                                        ),
-                                    message = runBlocking { getString(Res.string.custom_model_id_messages) },
-                                    confirm =
-                                        runBlocking { getString(Res.string.set) } to { state ->
-                                            viewModel.setCustomModelId(state.textField?.value ?: "")
-                                        },
-                                    dismiss = runBlocking { getString(Res.string.cancel) },
-                                ),
-                            )
-                        },
-                    )
-                    // Custom OpenAI Base URL - only show when Custom OpenAI is selected
-                    if (aiProvider == DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI) {
-                        val defaultBaseUrl = "https://api.openai.com/v1/"
-                        val customBaseUrlTitle = stringResource(Res.string.custom_base_url)
-                        val baseUrlLabel = stringResource(Res.string.base_url)
-                        val invalidUrlFormat = stringResource(Res.string.invalid_url_format)
-                        val customBaseUrlMessage = stringResource(Res.string.custom_base_url_message, defaultBaseUrl)
-                        val customHeadersJsonTitle = stringResource(Res.string.custom_headers_json)
-                        val headersJsonLabel = stringResource(Res.string.headers_json)
-                        val invalidJsonFormat = stringResource(Res.string.invalid_json_format)
-                        // The example JSON stays out of the translated text, so no translation can break it.
-                        val customHeadersMessage =
-                            stringResource(Res.string.custom_headers_message) + "\n{\"key1\":\"value1\",\"key2\":\"value2\"}"
-                        SettingItem(
-                            title = customBaseUrlTitle,
-                            subtitle = customOpenAIBaseUrl.ifEmpty { defaultBaseUrl },
-                            onClick = {
-                                viewModel.setAlertData(
-                                    SettingAlertState(
-                                        title = customBaseUrlTitle,
-                                        textField =
-                                            SettingAlertState.TextFieldData(
-                                                label = baseUrlLabel,
-                                                value = customOpenAIBaseUrl,
-                                                verifyCodeBlock = {
-                                                    (it.isEmpty() || it.startsWith("http")) to invalidUrlFormat
-                                                },
-                                            ),
-                                        message = customBaseUrlMessage,
-                                        confirm =
-                                            runBlocking { getString(Res.string.set) } to { state ->
-                                                val baseUrl = state.textField?.value ?: ""
-                                                viewModel.setCustomOpenAIBaseUrl(baseUrl)
-                                                localNetworkPermission.requestIfNeeded(baseUrl)
-                                            },
-                                        dismiss = runBlocking { getString(Res.string.cancel) },
-                                    ),
-                                )
-                            },
-                        )
-                        SettingItem(
-                            title = stringResource(Res.string.custom_headers),
-                            subtitle = stringResource(if (customOpenAIHeaders.isNotEmpty()) Res.string.configured else Res.string.not_set),
-                            onClick = {
-                                viewModel.setAlertData(
-                                    SettingAlertState(
-                                        title = customHeadersJsonTitle,
-                                        textField =
-                                            SettingAlertState.TextFieldData(
-                                                label = headersJsonLabel,
-                                                value = customOpenAIHeaders,
-                                                verifyCodeBlock = { input ->
-                                                    if (input.isEmpty()) {
-                                                        true to null
-                                                    } else {
-                                                        try {
-                                                            // Simple validation: check if it looks like JSON
-                                                            val trimmed = input.trim()
-                                                            (trimmed.startsWith("{") && trimmed.endsWith("}")) to invalidJsonFormat
-                                                        } catch (e: Exception) {
-                                                            false to invalidJsonFormat
-                                                        }
-                                                    }
-                                                },
-                                            ),
-                                        message = customHeadersMessage,
-                                        confirm =
-                                            runBlocking { getString(Res.string.set) } to { state ->
-                                                viewModel.setCustomOpenAIHeaders(state.textField?.value ?: "")
-                                            },
-                                        dismiss = runBlocking { getString(Res.string.cancel) },
-                                    ),
-                                )
-                            },
-                        )
-                    }
-                    SettingItem(
-                        title = stringResource(Res.string.use_ai_translation),
-                        subtitle = stringResource(Res.string.use_ai_translation_description),
-                        switch = (useAITranslation to { viewModel.setAITranslation(it) }),
-                        isEnable = isHasApiKey,
-                    )
-                }
-            }
-        }
-        // No Spotify in the XYZ look (its canvas, lyrics and login).
-        if (!isXyzLook) {
-            item(key = "spotify") {
-                SettingGroup(title = stringResource(Res.string.spotify)) {
-                    SettingItem(
-                        // The title follows the state: a row that still reads "Log in" while logged in
-                        // gives no clue that tapping it signs you out.
-                        title =
-                            if (spotifyLoggedIn) {
-                                stringResource(Res.string.log_out_from_spotify)
-                            } else {
-                                stringResource(Res.string.log_in_to_spotify)
-                            },
-                        subtitle =
-                            if (spotifyLoggedIn) {
-                                stringResource(Res.string.logged_in)
-                            } else {
-                                stringResource(Res.string.intro_login_to_spotify)
-                            },
-                        onClick = {
-                            if (spotifyLoggedIn) {
-                                viewModel.confirmLogOut(
-                                    confirmLabel = runBlocking { getString(Res.string.log_out_from_spotify) },
-                                ) { viewModel.setSpotifyLogIn(false) }
-                            } else {
-                                navController.navigate(SpotifyLoginDestination)
-                            }
-                        },
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.enable_spotify_lyrics),
-                        subtitle = stringResource(Res.string.spotify_lyrícs_info),
-                        switch = (spotifyLyrics to { viewModel.setSpotifyLyrics(it) }),
-                        isEnable = spotifyLoggedIn,
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.enable_canvas),
-                        subtitle = stringResource(Res.string.canvas_info),
-                        switch = (spotifyCanvas to { viewModel.setSpotifyCanvas(it) }),
-                        isEnable = spotifyLoggedIn,
-                    )
-                    // Sits with the canvas because it replaces it, but carries no isEnable: the two
-                    // rows above need a Spotify session and this one needs no account at all, so
-                    // gating it on spotifyLoggedIn would lock it away from the users it works for.
-                    SettingItem(
-                        title = stringResource(Res.string.enable_animated_artwork),
-                        subtitle = stringResource(Res.string.animated_artwork_info),
-                        switch = (amAnimatedArtwork to { viewModel.setAMAnimatedArtwork(it) }),
-                    )
-                }
-            }
-        }
-        // No Discord in the XYZ look.
-        if (!isXyzLook) {
-            item(key = "discord") {
-                SettingGroup(title = stringResource(Res.string.discord_integration)) {
-                    SettingItem(
-                        title =
-                            if (discordLoggedIn) {
-                                stringResource(Res.string.log_out_from_discord)
-                            } else {
-                                stringResource(Res.string.log_in_to_discord)
-                            },
-                        subtitle =
-                            if (discordLoggedIn) {
-                                stringResource(Res.string.logged_in)
-                            } else {
-                                stringResource(Res.string.intro_login_to_discord)
-                            },
-                        onClick = {
-                            if (discordLoggedIn) {
-                                viewModel.confirmLogOut(
-                                    confirmLabel = runBlocking { getString(Res.string.log_out_from_discord) },
-                                ) { viewModel.logOutDiscord() }
-                            } else {
-                                navController.navigate(DiscordLoginDestination)
-                            }
-                        },
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.enable_rich_presence),
-                        subtitle = stringResource(Res.string.rich_presence_info),
-                        switch = (richPresenceEnabled to { viewModel.setDiscordRichPresenceEnabled(it) }),
-                        isEnable = discordLoggedIn,
-                    )
-                }
             }
         }
         // Hidden entirely when the build carries no Last.fm credentials — a FOSS build, or a full
@@ -2459,210 +1428,12 @@ fun SettingScreen(
                 }
             }
         }
-        // No backup in the XYZ look.
-        if (!isXyzLook) {
-            item(key = "backup") {
-                SettingGroup(
-                    title = stringResource(Res.string.backup),
-                    footer = {
-                        val beforeUrl = stringResource(Res.string.import_data_intro).substringBefore("https://www.simpmusic.org/tools")
-                        val afterUrl = stringResource(Res.string.import_data_intro).substringAfter("https://www.simpmusic.org/tools")
-                        Text(
-                            buildAnnotatedString {
-                                append(beforeUrl)
-                                withLink(
-                                    LinkAnnotation.Url(
-                                        "https://www.simpmusic.org/tools",
-                                        TextLinkStyles(style = SpanStyle(color = MaterialTheme.colorScheme.primary)),
-                                    ),
-                                ) {
-                                    append("https://www.simpmusic.org/tools")
-                                }
-                                append(afterUrl)
-                            },
-                            style = typo().bodySmall,
-                        )
-                    },
-                ) {
-                    SettingItem(
-                        title = stringResource(Res.string.backup_downloaded),
-                        subtitle = stringResource(Res.string.backup_downloaded_description),
-                        switch = (backupDownloaded to { viewModel.setBackupDownloaded(it) }),
-                    )
-                    // Auto Backup (Android only)
-                    if (getPlatform() == Platform.Android) {
-                        SettingItem(
-                            title = stringResource(Res.string.auto_backup),
-                            subtitle = stringResource(Res.string.auto_backup_description),
-                            switch = (autoBackupEnabled to { viewModel.setAutoBackupEnabled(it) }),
-                        )
-                        AnimatedVisibility(visible = autoBackupEnabled) {
-                            Column {
-                                SettingItem(
-                                    title = stringResource(Res.string.backup_frequency),
-                                    subtitle =
-                                        when (autoBackupFrequency) {
-                                            DataStoreManager.AUTO_BACKUP_FREQUENCY_DAILY -> stringResource(Res.string.daily)
-                                            DataStoreManager.AUTO_BACKUP_FREQUENCY_WEEKLY -> stringResource(Res.string.weekly)
-                                            DataStoreManager.AUTO_BACKUP_FREQUENCY_MONTHLY -> stringResource(Res.string.monthly)
-                                            else -> stringResource(Res.string.daily)
-                                        },
-                                    onClick = {
-                                        viewModel.setAlertData(
-                                            SettingAlertState(
-                                                title = runBlocking { getString(Res.string.backup_frequency) },
-                                                selectOne =
-                                                    SettingAlertState.SelectData(
-                                                        listSelect =
-                                                            listOf(
-                                                                (autoBackupFrequency == DataStoreManager.AUTO_BACKUP_FREQUENCY_DAILY) to
-                                                                    runBlocking { getString(Res.string.daily) },
-                                                                (autoBackupFrequency == DataStoreManager.AUTO_BACKUP_FREQUENCY_WEEKLY) to
-                                                                    runBlocking { getString(Res.string.weekly) },
-                                                                (autoBackupFrequency == DataStoreManager.AUTO_BACKUP_FREQUENCY_MONTHLY) to
-                                                                    runBlocking { getString(Res.string.monthly) },
-                                                            ),
-                                                    ),
-                                                confirm =
-                                                    runBlocking { getString(Res.string.change) } to { state ->
-                                                        val frequency =
-                                                            when (state.selectOne?.getSelected()) {
-                                                                runBlocking {
-                                                                    getString(
-                                                                        Res.string.daily,
-                                                                    )
-                                                                },
-                                                                -> DataStoreManager.AUTO_BACKUP_FREQUENCY_DAILY
-                                                                runBlocking {
-                                                                    getString(
-                                                                        Res.string.weekly,
-                                                                    )
-                                                                },
-                                                                -> DataStoreManager.AUTO_BACKUP_FREQUENCY_WEEKLY
-                                                                runBlocking {
-                                                                    getString(
-                                                                        Res.string.monthly,
-                                                                    )
-                                                                },
-                                                                -> DataStoreManager.AUTO_BACKUP_FREQUENCY_MONTHLY
-                                                                else -> DataStoreManager.AUTO_BACKUP_FREQUENCY_DAILY
-                                                            }
-                                                        viewModel.setAutoBackupFrequency(frequency)
-                                                    },
-                                                dismiss = runBlocking { getString(Res.string.cancel) },
-                                            ),
-                                        )
-                                    },
-                                )
-                                SettingItem(
-                                    title = stringResource(Res.string.keep_backups),
-                                    subtitle = stringResource(Res.string.keep_backups_format, "$autoBackupMaxFiles"),
-                                    onClick = {
-                                        viewModel.setAlertData(
-                                            SettingAlertState(
-                                                title = runBlocking { getString(Res.string.keep_backups) },
-                                                selectOne =
-                                                    SettingAlertState.SelectData(
-                                                        listSelect =
-                                                            listOf(
-                                                                (autoBackupMaxFiles == 3) to "3",
-                                                                (autoBackupMaxFiles == 5) to "5",
-                                                                (autoBackupMaxFiles == 10) to "10",
-                                                                (autoBackupMaxFiles == 15) to "15",
-                                                            ),
-                                                    ),
-                                                confirm =
-                                                    runBlocking { getString(Res.string.change) } to { state ->
-                                                        val maxFiles = state.selectOne?.getSelected()?.toIntOrNull() ?: 5
-                                                        viewModel.setAutoBackupMaxFiles(maxFiles)
-                                                    },
-                                                dismiss = runBlocking { getString(Res.string.cancel) },
-                                            ),
-                                        )
-                                    },
-                                )
-                                SettingItem(
-                                    title = stringResource(Res.string.last_backup),
-                                    subtitle =
-                                        if (autoBackupLastTime == 0L) {
-                                            stringResource(Res.string.never)
-                                        } else {
-                                            DateTimeFormatter
-                                                .ofPattern("yyyy-MM-dd HH:mm:ss")
-                                                .withZone(ZoneId.systemDefault())
-                                                .format(Instant.ofEpochMilli(autoBackupLastTime))
-                                        },
-                                )
-                            }
-                        }
-                    }
-                    SettingItem(
-                        title = stringResource(Res.string.backup),
-                        subtitle = stringResource(Res.string.save_all_your_playlist_data),
-                        onClick = {
-                            coroutineScope.launch {
-                                backupLauncher.launch()
-                            }
-                        },
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.restore_your_data),
-                        subtitle = stringResource(Res.string.restore_your_saved_data),
-                        onClick = {
-                            coroutineScope.launch {
-                                restoreLauncher.launch()
-                            }
-                        },
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.import_data),
-                        subtitle = stringResource(Res.string.import_playlists_from_other_apps),
-                        onClick = {
-                            coroutineScope.launch {
-                                importLauncher.launch()
-                            }
-                        },
-                    )
-                }
-            }
-        }
         item(key = "about_us") {
             SettingGroup(title = stringResource(Res.string.about_us)) {
                 SettingItem(
                     title = stringResource(Res.string.version),
                     subtitle = stringResource(Res.string.version_format, VersionManager.getVersionName()),
                 )
-                // The upstream author's links are not this build's.
-                if (!isXyzLook) {
-                    SettingItem(
-                        title = stringResource(Res.string.author),
-                        subtitle = stringResource(Res.string.maxrave_dev),
-                        onClick = {
-                            uriHandler.openUri("https://github.com/maxrave-dev")
-                        },
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.follow_me_on_x),
-                        subtitle = "@maxrave_dev",
-                        onClick = {
-                            uriHandler.openUri("https://x.com/maxrave_dev")
-                        },
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.developer_blog),
-                        subtitle = stringResource(Res.string.developer_blog_tagline),
-                        onClick = {
-                            uriHandler.openUri("https://www.simpmusic.org/blogs")
-                        },
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.buy_me_a_coffee),
-                        subtitle = stringResource(Res.string.donation),
-                        onClick = {
-                            uriHandler.openUri("https://github.com/sponsors/maxrave-dev")
-                        },
-                    )
-                }
             }
         }
         item(key = "developer_option") {
@@ -2726,80 +1497,6 @@ fun SettingScreen(
                     },
                 ) {
                     Text(text = alertBasicState.dismiss)
-                }
-            },
-        )
-    }
-    if (showColorPickerDialog) {
-        val presetColors =
-            listOf(
-                "FF8ECAE6",
-                "FF4C82EF",
-                "FF9B72CF",
-                "FFEF6C9B",
-                "FFEF5350",
-                "FFF4A340",
-                "FFFFCA28",
-                "FF66BB6A",
-                "FF26A69A",
-                "FFBDBDBD",
-            )
-        var pendingHex by rememberSaveable { mutableStateOf(customThemeColorHex.takeLast(6)) }
-        val parsedColor = parseThemeColorHex(pendingHex)
-        AlertDialog(
-            onDismissRequest = { showColorPickerDialog = false },
-            title = { Text(text = stringResource(Res.string.custom_color), style = typo().titleSmall) },
-            text = {
-                Column {
-                    presetColors.chunked(5).forEach { rowColors ->
-                        Row(modifier = Modifier.padding(vertical = 4.dp)) {
-                            rowColors.forEach { hex ->
-                                val color = parseThemeColorHex(hex) ?: Color.Gray
-                                val isSelected = pendingHex.equals(hex.takeLast(6), ignoreCase = true)
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .padding(4.dp)
-                                            .size(36.dp)
-                                            .clip(CircleShape)
-                                            .background(color)
-                                            .border(
-                                                width = if (isSelected) 3.dp else 0.dp,
-                                                color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
-                                                shape = CircleShape,
-                                            ).clickable { pendingHex = hex.takeLast(6) },
-                                )
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    TextField(
-                        value = pendingHex,
-                        onValueChange = { pendingHex = it.removePrefix("#").take(8).uppercase() },
-                        label = { Text("HEX") },
-                        prefix = { Text("#") },
-                        singleLine = true,
-                        isError = parsedColor == null,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = parsedColor != null,
-                    onClick = {
-                        parsedColor?.let {
-                            val argb = "FF${pendingHex.takeLast(6).uppercase()}"
-                            sharedViewModel.setCustomThemeColor(argb)
-                            sharedViewModel.setThemeColorSource(DataStoreManager.THEME_COLOR_CUSTOM)
-                        }
-                        showColorPickerDialog = false
-                    },
-                ) { Text(text = stringResource(Res.string.change)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showColorPickerDialog = false }) {
-                    Text(text = stringResource(Res.string.cancel))
                 }
             },
         )

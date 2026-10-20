@@ -32,7 +32,6 @@ import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.viewModel.base.BaseViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,8 +64,6 @@ import simpmusic.composeapp.generated.resources.error
 import simpmusic.composeapp.generated.resources.log_out_confirm_message
 import simpmusic.composeapp.generated.resources.restore_failed
 import simpmusic.composeapp.generated.resources.restore_in_progress
-import simpmusic.composeapp.generated.resources.romanization_japanese_dict_failed
-import simpmusic.composeapp.generated.resources.romanization_japanese_dict_ready
 import simpmusic.composeapp.generated.resources.smart_downloads_downloading
 import simpmusic.composeapp.generated.resources.smart_downloads_waiting_for_wifi
 import simpmusic.composeapp.generated.resources.warning
@@ -82,7 +79,6 @@ class SettingsViewModel(
     private val artistRepository: ArtistRepository,
     private val lyricsRomanizerRepository: LyricsRomanizerRepository,
 ) : BaseViewModel() {
-    private val databasePath: String? = commonRepository.getDatabasePath()
     private val downloadUtils: DownloadHandler by inject()
 
     val castState: StateFlow<GenericCastState> get() = mediaPlayerHandler.castState
@@ -196,8 +192,6 @@ class SettingsViewModel(
     val explicitContentEnabled: StateFlow<Boolean> = _explicitContentEnabled
 
     private val _discordLoggedIn = MutableStateFlow(false)
-    val discordLoggedIn: StateFlow<Boolean> = _discordLoggedIn
-
     private val _richPresenceEnabled = MutableStateFlow(false)
     val richPresenceEnabled: StateFlow<Boolean> = _richPresenceEnabled
 
@@ -642,14 +636,6 @@ class SettingsViewModel(
         }
     }
 
-    fun setDiscordRichPresenceEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            dataStoreManager.setRichPresenceEnabled(enabled)
-            delay(100)
-            getDiscordRichPresenceEnabled()
-        }
-    }
-
     private fun getExplicitContentEnabled() {
         viewModelScope.launch {
             dataStoreManager.explicitContentEnabled.collect { enabled ->
@@ -774,20 +760,6 @@ class SettingsViewModel(
         }
     }
 
-    fun setContributorName(name: String) {
-        viewModelScope.launch {
-            dataStoreManager.setContributorLyricsDatabase(name to contributor.value.second)
-            getContributorNameAndEmail()
-        }
-    }
-
-    fun setContributorEmail(email: String) {
-        viewModelScope.launch {
-            dataStoreManager.setContributorLyricsDatabase(contributor.value.first to email)
-            getContributorNameAndEmail()
-        }
-    }
-
     private fun getCustomModelId() {
         viewModelScope.launch {
             dataStoreManager.customModelId.collect { customModelId ->
@@ -856,13 +828,6 @@ class SettingsViewModel(
         }
     }
 
-    fun setAITranslation(useAITranslation: Boolean) {
-        viewModelScope.launch {
-            dataStoreManager.setUseAITranslation(useAITranslation)
-            getAITranslation()
-        }
-    }
-
     private fun getAIApiKey() {
         viewModelScope.launch {
             dataStoreManager.aiApiKey.collect { aiApiKey ->
@@ -892,13 +857,6 @@ class SettingsViewModel(
             dataStoreManager.autoCheckForUpdates.collect { autoCheckUpdate ->
                 _autoCheckUpdate.value = autoCheckUpdate == DataStoreManager.TRUE
             }
-        }
-    }
-
-    fun setAutoCheckUpdate(autoCheckUpdate: Boolean) {
-        viewModelScope.launch {
-            dataStoreManager.setAutoCheckForUpdates(autoCheckUpdate)
-            getAutoCheckUpdate()
         }
     }
 
@@ -1016,17 +974,6 @@ class SettingsViewModel(
         }
     }
 
-    fun setProxyCredentials(
-        username: String,
-        password: String,
-    ) {
-        log("setProxyCredentials: username=$username")
-        viewModelScope.launch {
-            dataStoreManager.setProxyUsername(username)
-            dataStoreManager.setProxyPassword(password)
-        }
-    }
-
     fun getThumbCacheSize(context: PlatformContext) {
         viewModelScope.launch {
             val diskCache = SingletonImageLoader.get(context).diskCache
@@ -1086,13 +1033,6 @@ class SettingsViewModel(
         }
     }
 
-    fun setUseTranslation(useTranslation: Boolean) {
-        viewModelScope.launch {
-            dataStoreManager.setEnableTranslateLyric(useTranslation)
-            getUseTranslation()
-        }
-    }
-
     fun getLyricsProvider() {
         viewModelScope.launch {
             dataStoreManager.lyricsProvider.collect { mainLyricsProvider ->
@@ -1105,42 +1045,6 @@ class SettingsViewModel(
         viewModelScope.launch {
             dataStoreManager.setLyricsProvider(provider)
             getLyricsProvider()
-        }
-    }
-
-    private var japaneseDictionaryWaiter: Job? = null
-
-    /**
-     * Fetches the Japanese romanization dictionary if this platform needs one and does not have
-     * it yet. Called from the settings screen every time a saved selection includes Japanese, so
-     * a FAILED attempt is retried by simply confirming the dialog again; READY makes this a no-op.
-     * A download already running — the repository starts one by itself when it finds Japanese
-     * selected and the pack missing — is joined rather than skipped, so its outcome still gets a
-     * toast. Progress and outcome live in [japaneseDictionaryState], which the romanization row's
-     * subtitle watches. The download runs in the repository's own scope, so leaving Settings
-     * mid-way only loses the toast below, not the download.
-     */
-    fun downloadJapaneseDictionaryIfNeeded() {
-        if (japaneseDictionaryState.value == RomanizationDictionaryState.READY) return
-        // Saving the dialog again mid-download (say, to add Korean) would otherwise queue a
-        // second waiter and show the same toast twice. Checked against DOWNLOADING as well: a
-        // waiter outlives its download by the moment it takes to show the toast, and a save in
-        // that moment, after a failure, is a real retry.
-        if (japaneseDictionaryWaiter?.isActive == true &&
-            japaneseDictionaryState.value == RomanizationDictionaryState.DOWNLOADING
-        ) {
-            return
-        }
-        japaneseDictionaryWaiter = viewModelScope.launch {
-            // The state the download settled on, as the repository saw it end. Reading
-            // japaneseDictionaryState back afterwards could already show the next attempt.
-            when (lyricsRomanizerRepository.downloadJapaneseDictionary()) {
-                RomanizationDictionaryState.READY ->
-                    makeToast(getString(Res.string.romanization_japanese_dict_ready))
-                RomanizationDictionaryState.FAILED ->
-                    makeToast(getString(Res.string.romanization_japanese_dict_failed))
-                else -> {}
-            }
         }
     }
 
@@ -1198,13 +1102,6 @@ class SettingsViewModel(
         }
     }
 
-    fun setPlayVideoInsteadOfAudio(playVideoInsteadOfAudio: Boolean) {
-        viewModelScope.launch {
-            dataStoreManager.setWatchVideoInsteadOfPlayingAudio(playVideoInsteadOfAudio)
-            getPlayVideoInsteadOfAudio()
-        }
-    }
-
     fun getRadioAudioOnly() {
         viewModelScope.launch {
             dataStoreManager.radioAudioOnly.collect { radioAudioOnly ->
@@ -1251,15 +1148,6 @@ class SettingsViewModel(
             dataStoreManager.quality.collect { quality ->
                 _quality.emit(QUALITY.normalize(quality))
             }
-        }
-    }
-
-    fun changeVideoQuality(item: String) {
-        viewModelScope.launch {
-            if (VIDEO_QUALITY.items.contains(item)) {
-                dataStoreManager.setVideoQuality(item)
-            }
-            getVideoQuality()
         }
     }
 
@@ -1726,8 +1614,6 @@ class SettingsViewModel(
     }
 
     private var _spotifyLogIn: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val spotifyLogIn: StateFlow<Boolean> = _spotifyLogIn
-
     fun getSpotifyLogIn() {
         viewModelScope.launch {
             dataStoreManager.spdc.collect { loggedIn ->
@@ -1954,27 +1840,6 @@ class SettingsViewModel(
 
     fun setReverbMix(mix: Float) {
         viewModelScope.launch { dataStoreManager.setReverbMix(mix) }
-    }
-
-    /**
-     * Move all three delay values together, in one coroutine.
-     *
-     * Three separate preference keys, so the player does briefly see one of them applied against
-     * the others' old values — the same seam [applyEqualizerPreset] has. Writing them from one
-     * launch at least keeps that window to a single pass instead of three racing ones, and no
-     * ordering of these three is dangerous the way the equalizer's preamp is: an echo caught
-     * mid-change is a wrong echo for a few milliseconds, never a clipped one.
-     */
-    fun applyDelayPreset(
-        timeMs: Int,
-        feedback: Float,
-        mix: Float,
-    ) {
-        viewModelScope.launch {
-            dataStoreManager.setDelayTimeMs(timeMs)
-            dataStoreManager.setDelayFeedback(feedback)
-            dataStoreManager.setDelayMix(mix)
-        }
     }
 
     private var _syncFollowToYouTube: MutableStateFlow<Boolean> = MutableStateFlow(false)

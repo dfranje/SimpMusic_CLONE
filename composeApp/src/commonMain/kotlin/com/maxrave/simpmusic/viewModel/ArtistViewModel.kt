@@ -35,7 +35,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import simpmusic.composeapp.generated.resources.Res
 import simpmusic.composeapp.generated.resources.radio
-import simpmusic.composeapp.generated.resources.shuffle
 import simpmusic.composeapp.generated.resources.sync_follow_failed
 import simpmusic.composeapp.generated.resources.subscribed_on_youtube
 import simpmusic.composeapp.generated.resources.unsubscribed_on_youtube
@@ -48,8 +47,6 @@ class ArtistViewModel(
 ) : BaseViewModel() {
     // Artist name-logo image + accent color from the hidden catalog (immersive header).
     private val _artistLogo: MutableStateFlow<ArtistLogo?> = MutableStateFlow(null)
-    val artistLogo: StateFlow<ArtistLogo?> = _artistLogo
-
     // Apple Music's animated artist artwork, which plays as the header. It replaced the Spotify
     // canvas of the artist's most-popular song: that was a video OF A TRACK standing in for a
     // page about the artist, and it changed whenever their top song did.
@@ -233,36 +230,6 @@ class ArtistViewModel(
         }
     }
 
-    fun onShuffleClick(endpoint: YouTubeWatchEndpoint) {
-        viewModelScope.launch {
-            songRepository.getRadioFromEndpoint(endpoint).collectLatest { res ->
-                val data = res.data
-                when (res) {
-                    is Resource.Success if data != null && data.first.isNotEmpty() -> {
-                        setQueueData(
-                            QueueData.Data(
-                                listTracks = data.first,
-                                firstPlayedTrack = data.first.first(),
-                                playlistId = endpoint.playlistId,
-                                playlistName = "\"${artistScreenState.value.data.title}\" ${getString(Res.string.shuffle)}",
-                                playlistType = PlaylistType.RADIO,
-                                continuation = data.second,
-                            ),
-                        )
-                        loadMediaItem(
-                            data.first.first(),
-                            Config.PLAYLIST_CLICK,
-                            0,
-                        )
-                    }
-
-                    else -> {
-                        makeToast(res.message)
-                    }
-                }
-            }
-        }
-    }
 }
 
 data class ArtistScreenData(

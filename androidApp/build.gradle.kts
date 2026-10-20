@@ -13,8 +13,27 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+// Release signing for this fork's own builds, read from xyz-signing.properties at the repo root
+// (storeFile, storePassword, keyAlias, keyPassword). The file and the keystore stay out of git;
+// without them the release APK is built unsigned.
+val xyzSigning: Properties? =
+    rootProject.file("xyz-signing.properties").takeIf { it.exists() }?.let { file ->
+        Properties().apply { file.inputStream().use { load(it) } }
+    }
+
 android {
     val abis = arrayOf("armeabi-v7a", "arm64-v8a", "x86_64")
+
+    signingConfigs {
+        if (xyzSigning != null) {
+            create("xyz") {
+                storeFile = rootProject.file(xyzSigning.getProperty("storeFile"))
+                storePassword = xyzSigning.getProperty("storePassword")
+                keyAlias = xyzSigning.getProperty("keyAlias")
+                keyPassword = xyzSigning.getProperty("keyPassword")
+            }
+        }
+    }
 
     namespace = "com.maxrave.simpmusic"
     compileSdk = 37
@@ -87,6 +106,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (xyzSigning != null) signingConfig = signingConfigs.getByName("xyz")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

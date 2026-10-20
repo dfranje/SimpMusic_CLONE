@@ -33,8 +33,6 @@ val blackMoreOverlay = Color(0x8f242424)
 // step one shade back towards the middle so they read as raised. The light panel is not here —
 // it comes from colorScheme.surfaceContainer, which already sits at the right distance.
 
-val desktopWindowDark = Color(0xFF000000)
-val desktopWindowLight = Color(0xFFFFFFFF)
 val desktopPanelDark = Color(0xFF121212)
 
 // ===== Desktop window controls =====

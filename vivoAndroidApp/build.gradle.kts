@@ -22,9 +22,26 @@ plugins {
 
 val androidAppDir = rootProject.file("androidApp")
 
+// Same optional release signing as androidApp (xyz-signing.properties at the repo root, never committed).
+val xyzSigning: Properties? =
+    rootProject.file("xyz-signing.properties").takeIf { it.exists() }?.let { file ->
+        Properties().apply { file.inputStream().use { load(it) } }
+    }
+
 android {
     namespace = "com.maxrave.simpmusic"
     compileSdk = 37
+
+    signingConfigs {
+        if (xyzSigning != null) {
+            create("xyz") {
+                storeFile = rootProject.file(xyzSigning.getProperty("storeFile"))
+                storePassword = xyzSigning.getProperty("storePassword")
+                keyAlias = xyzSigning.getProperty("keyAlias")
+                keyPassword = xyzSigning.getProperty("keyPassword")
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.spotify.music"
@@ -97,6 +114,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (xyzSigning != null) signingConfig = signingConfigs.getByName("xyz")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 File(androidAppDir, "proguard-rules.pro"),

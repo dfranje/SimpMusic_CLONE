@@ -1,66 +1,39 @@
 package com.maxrave.simpmusic.extension
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.FloatSpringSpec
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.lazy.LazyListItemInfo
-import androidx.compose.foundation.lazy.LazyListLayoutInfo
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.DrawModifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
@@ -70,8 +43,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.kmpalette.palette.graphics.Palette
 import com.maxrave.domain.data.model.ui.ScreenSizeInfo
-import com.maxrave.logger.Logger
-import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.ui.theme.LocalAppColors
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.HazeColorEffect
@@ -84,7 +55,6 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
-import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
@@ -136,13 +106,6 @@ class GreyScaleModifier : DrawModifier {
             it.restore()
         }
     }
-}
-
-fun LazyListState.visibilityPercent(info: LazyListItemInfo): Float {
-    val cutTop = max(0, layoutInfo.viewportStartOffset - info.offset)
-    val cutBottom = max(0, info.offset + info.size - layoutInfo.viewportEndOffset)
-
-    return max(0f, 100f - (cutTop + cutBottom) * 100f / info.size)
 }
 
 fun Modifier.greyScale() = this.then(GreyScaleModifier())
@@ -261,367 +224,11 @@ fun Modifier.angledGradientBackground(
     },
 )
 
-// Angle Gradient Background without size
-fun GradientOffset(angle: GradientAngle): GradientOffset =
-    when (angle) {
-        GradientAngle.CW45 -> {
-            GradientOffset(
-                start = Offset.Zero,
-                end = Offset.Infinite,
-            )
-        }
-
-        GradientAngle.CW90 -> {
-            GradientOffset(
-                start = Offset.Zero,
-                end = Offset(0f, Float.POSITIVE_INFINITY),
-            )
-        }
-
-        GradientAngle.CW135 -> {
-            GradientOffset(
-                start = Offset(Float.POSITIVE_INFINITY, 0f),
-                end = Offset(0f, Float.POSITIVE_INFINITY),
-            )
-        }
-
-        GradientAngle.CW180 -> {
-            GradientOffset(
-                start = Offset(Float.POSITIVE_INFINITY, 0f),
-                end = Offset.Zero,
-            )
-        }
-
-        GradientAngle.CW225 -> {
-            GradientOffset(
-                start = Offset.Infinite,
-                end = Offset.Zero,
-            )
-        }
-
-        GradientAngle.CW270 -> {
-            GradientOffset(
-                start = Offset(0f, Float.POSITIVE_INFINITY),
-                end = Offset.Zero,
-            )
-        }
-
-        GradientAngle.CW315 -> {
-            GradientOffset(
-                start = Offset(0f, Float.POSITIVE_INFINITY),
-                end = Offset(Float.POSITIVE_INFINITY, 0f),
-            )
-        }
-
-        else -> {
-            GradientOffset(
-                start = Offset.Zero,
-                end = Offset(Float.POSITIVE_INFINITY, 0f),
-            )
-        }
-    }
-
-/**
- * Offset for [Brush.linearGradient] to rotate gradient depending on [start] and [end] offsets.
- */
-data class GradientOffset(
-    val start: Offset,
-    val end: Offset,
-)
-
-enum class GradientAngle {
-    CW0,
-    CW45,
-    CW90,
-    CW135,
-    CW180,
-    CW225,
-    CW270,
-    CW315,
-}
-
 @Composable
 expect fun getScreenSizeInfo(): ScreenSizeInfo
 
 @Composable
-fun NonLazyGrid(
-    columns: Int,
-    itemCount: Int,
-    modifier: Modifier = Modifier,
-    content:
-        @Composable()
-        (Int) -> Unit,
-) {
-    Column(modifier = modifier) {
-        var rows = (itemCount / columns)
-        if (itemCount.mod(columns) > 0) {
-            rows += 1
-        }
-
-        for (rowId in 0 until rows) {
-            val firstIndex = rowId * columns
-
-            Row {
-                for (columnId in 0 until columns) {
-                    val index = firstIndex + columnId
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                    ) {
-                        if (index < itemCount) {
-                            content(index)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Apple Music's handover between two lyric lines: the page does not move as one block. The row
- * at the top of the page sets off first and every row below it a little after the one above it,
- * so the spacing opens as the page leaves and closes as it lands. The schedule is AMLL's
- * (`calcLayout` in packages/core/src/lyric-player/base/index.ts): nothing for the first row still
- * on the page, then 50 ms more per row, the step shrinking by 1/1.05 a row once past the sung line.
- *
- * Done inside a LazyColumn the way BitChord does it: the list itself scrolls by the undelayed
- * curve, and each row draws itself back ([lagPx]) by what its own delayed curve has not covered
- * yet. A row with no delay therefore sits still against the list — the line leaving through the
- * top is clipped like any scroll — and a row with one only ever trails downwards, into space the
- * list has already laid out, so nothing pops in at either edge.
- *
- * One handover at a time: a new line ends the running one, and any row still trailing snaps into
- * place. With lines a second or more apart nothing is left to snap; under about 0.7 s apart a few
- * pixels are, mostly on the blurred rows further down.
- */
-class LyricsStagger {
-    // The curve the list scrolls on AND the one every row trails on: two different curves, and a
-    // row with no delay would still drift against the list it sits in.
-    //
-    // A spring, not a tween. A tween covers a fixed distance in a fixed time, so a one-line step
-    // and a six-line jump after a seek both take 650ms — the short one crawls, the long one races.
-    // A spring is driven by the distance itself, which is why Apple's page settles the same way
-    // whether it moved a little or a lot. Damping just under 1 keeps it soft without bouncing, and
-    // low stiffness is what makes it read as gliding rather than snapping into place.
-    private val spring =
-        FloatSpringSpec(dampingRatio = 0.9f, stiffness = 180f, visibilityThreshold = 0.001f)
-    private val springMs = spring.getDurationNanos(0f, 1f, 0f) / 1_000_000f
-
-    // Read inside the rows' graphicsLayer, so a handover re-runs only those layers — draw phase,
-    // no recomposition and no layout.
-    private var lagDistance by mutableFloatStateOf(0f)
-    internal var elapsedMs by mutableFloatStateOf(0f)
-
-    private var firstOnPage = 0
-    private var target = -1
-
-    /** How far along the scroll is, 0..1, [ms] into the handover. */
-    internal fun progress(ms: Float): Float =
-        when {
-            ms <= 0f -> 0f
-            ms >= springMs -> 1f
-            else -> spring.getValueFromNanos((ms * 1_000_000f).toLong(), 0f, 1f, 0f)
-        }
-
-    /**
-     * Starts a handover of [distance] px to [index]; returns how long until the last row on the
-     * page has landed, in ms. Only a step to the NEXT line staggers: a seek, a tapped line or a
-     * jump from off screen moves as one block, as AMLL turns the stagger off on a seek.
-     */
-    internal fun begin(
-        layoutInfo: LazyListLayoutInfo,
-        index: Int,
-        distance: Float,
-        wasVisible: Boolean,
-    ): Float {
-        val staggered = wasVisible && index == target + 1
-        target = index
-        // The first row still on the page once it lands. AMLL counts the delays from there, at
-        // zero, so every row above it — the one about to leave through the top included — moves
-        // with the list.
-        val pageTop = layoutInfo.viewportStartOffset + distance
-        firstOnPage =
-            layoutInfo.visibleItemsInfo
-                .firstOrNull { it.offset + it.size > pageTop }
-                ?.index ?: index
-        elapsedMs = 0f
-        lagDistance = if (staggered) distance else 0f
-        if (!staggered) return springMs
-        // Two rows past the bottom: the ones the scroll is about to bring in.
-        val lastRow = (layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: index) + 2
-        return springMs + delayMs(lastRow)
-    }
-
-    internal fun end() {
-        lagDistance = 0f
-        elapsedMs = 0f
-    }
-
-    /** How far below its laid-out place row [index] is drawn right now, in px. */
-    fun lagPx(index: Int): Float {
-        val distance = lagDistance
-        if (distance == 0f) return 0f
-        val delay = delayMs(index)
-        if (delay == 0f) return 0f
-        // Read only past the early returns: a row with nothing to trail never reads the clock, so
-        // a handover invalidates only the layers that actually move against the list.
-        val ms = elapsedMs
-        return distance * (progress(ms) - progress(ms - delay))
-    }
-
-    // AMLL calcLayout: 0 for the first row on the page, then 50 ms more per row; from the sung
-    // line down the step shrinks by 1/1.05 a row.
-    private fun delayMs(index: Int): Float {
-        var delay = 0f
-        var step = 50f
-        for (row in firstOnPage until index) {
-            delay += step
-            if (row >= target) step /= 1.05f
-        }
-        return delay
-    }
-}
-
-/**
- * Scrolls [index] to the TOP edge of the viewport, the counterpart to
- * [animateScrollAndCentralizeItem]. Used by the Apple Music lyrics style, which anchors the page
- * near the top rather than around the middle.
- *
- * Gentler than the centralising version on purpose: that one repositions a list the user is
- * reading, while this one runs on every lyric line — a fixed 300ms step reads as a jolt once per
- * line, where a spring reads as the page drifting with the song. The one-frame wait and the
- * jump-if-offscreen guard are kept verbatim; both are needed for layoutInfo to hold the target
- * item before its offset is measured.
- *
- * [stagger] lets the rows trail the scroll; see [LyricsStagger].
- */
-suspend fun LazyListState.animateScrollAndAnchorItemTop(
-    index: Int,
-    /**
-     * Extra pixels added to the scroll. Negative leaves that much of the PREVIOUS content visible
-     * above [index] — used to expose exactly one physical text row, which is not the same as
-     * scrolling to the previous item: a lyric line that wraps is one item but several rows.
-     */
-    extraOffsetPx: Float = 0f,
-    stagger: LyricsStagger,
-) {
-    if (index < 0) return
-    val initiallyVisible = this.layoutInfo.visibleItemsInfo.any { it.index == index }
-    if (!initiallyVisible) {
-        this.scrollToItem(index)
-    }
-    withFrameNanos { }
-    val itemInfo =
-        this.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return
-    val distance =
-        (itemInfo.offset - this.layoutInfo.viewportStartOffset).toFloat() + extraOffsetPx
-    val spanMs = stagger.begin(this.layoutInfo, index, distance, initiallyVisible)
-    try {
-        // animateScrollBy's own loop, but stepped by the clock rather than by the spring, so the
-        // rows can read the same clock and run the same curve a little behind it.
-        var scrolled = 0f
-        scroll {
-            val clock = tween<Float>(spanMs.toInt(), easing = LinearEasing)
-            animate(0f, spanMs, animationSpec = clock) { ms, _ ->
-                stagger.elapsedMs = ms
-                scrolled += scrollBy(distance * stagger.progress(ms) - scrolled)
-            }
-        }
-    } finally {
-        // Done, or cut short — by the next line, or by a finger taking the list. Either way every
-        // row goes back to where the list has it.
-        stagger.end()
-    }
-}
-
-suspend fun LazyListState.animateScrollAndCentralizeItem(index: Int) {
-    if (index < 0) return
-    // If target item is not currently visible, jump close to it first so layoutInfo updates next frame.
-    val initiallyVisible = this.layoutInfo.visibleItemsInfo.any { it.index == index }
-    if (!initiallyVisible) {
-        this.scrollToItem(index)
-    }
-    // Wait for one frame so visibleItemsInfo reflects the latest layout pass.
-    withFrameNanos { }
-    val itemInfo =
-        this.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return
-    val viewportStart = this.layoutInfo.viewportStartOffset
-    val viewportEnd = this.layoutInfo.viewportEndOffset
-    val viewportCenter = (viewportStart + viewportEnd) / 2
-    val itemCenter = itemInfo.offset + itemInfo.size / 2
-    this.animateScrollBy(
-        value = (itemCenter - viewportCenter).toFloat(),
-        animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing),
-    )
-}
-
-@Composable
 expect fun KeepScreenOn()
-
-@Composable
-fun LazyListState.isScrollingUp(): State<Boolean> {
-    var previousIndex by remember(this) { mutableIntStateOf(firstVisibleItemIndex) }
-    var previousScrollOffset by remember(this) { mutableIntStateOf(firstVisibleItemScrollOffset) }
-
-    LaunchedEffect(Unit) {
-        snapshotFlow { layoutInfo.totalItemsCount }.collect {
-            Logger.w("isScrollingUp", "firstVisibleItemIndex: $firstVisibleItemIndex")
-            previousIndex = firstVisibleItemIndex
-            previousScrollOffset = firstVisibleItemScrollOffset
-        }
-    }
-
-    return remember(this) {
-        derivedStateOf {
-            if (firstVisibleItemIndex > 0) {
-                if (previousIndex != firstVisibleItemIndex) {
-                    previousIndex > firstVisibleItemIndex
-                } else {
-                    previousScrollOffset >= firstVisibleItemScrollOffset
-                }.also {
-                    previousIndex = firstVisibleItemIndex
-                    previousScrollOffset = firstVisibleItemScrollOffset
-                }
-            } else {
-                true
-            }
-        }
-    }
-}
-
-@Composable
-fun LazyGridState.isScrollingUp(): State<Boolean> {
-    var previousIndex by remember(this) { mutableIntStateOf(firstVisibleItemIndex) }
-    var previousScrollOffset by remember(this) { mutableIntStateOf(firstVisibleItemScrollOffset) }
-
-    LaunchedEffect(Unit) {
-        snapshotFlow { layoutInfo.totalItemsCount }.collect {
-            Logger.w("isScrollingUp", "firstVisibleItemIndex: $firstVisibleItemIndex")
-            previousIndex = firstVisibleItemIndex
-            previousScrollOffset = firstVisibleItemScrollOffset
-        }
-    }
-
-    return remember(this) {
-        derivedStateOf {
-            if (firstVisibleItemIndex > 0) {
-                if (previousIndex != firstVisibleItemIndex) {
-                    previousIndex > firstVisibleItemIndex
-                } else {
-                    previousScrollOffset >= firstVisibleItemScrollOffset
-                }.also {
-                    previousIndex = firstVisibleItemIndex
-                    previousScrollOffset = firstVisibleItemScrollOffset
-                }
-            } else {
-                true
-            }
-        }
-    }
-}
 
 fun Palette?.getColorFromPalette(): Color {
     val p = this ?: return Color.Black
@@ -773,41 +380,12 @@ fun artworkScrimBrush(
     steps: Int = 24,
 ): Brush = smoothScrimBrush(from = color.copy(alpha = 0f), to = color, steps = steps)
 
-fun Modifier.isElementVisible(onVisibilityChanged: (Boolean) -> Unit) =
-    composed {
-        val isVisible by remember { derivedStateOf { mutableStateOf(false) } }
-        LaunchedEffect(isVisible.value) { onVisibilityChanged.invoke(isVisible.value) }
-        this.onGloballyPositioned { layoutCoordinates ->
-            isVisible.value = layoutCoordinates.parentLayoutCoordinates?.let {
-                val parentBounds = it.boundsInWindow()
-                val childBounds = layoutCoordinates.boundsInWindow()
-                parentBounds.overlaps(childBounds)
-            } == true
-        }
-    }
-
 fun Color.rgbFactor(factor: Float): Color {
     val r = min(red * factor, 255f)
     val g = min(green * factor, 255f)
     val b = min(blue * factor, 255f)
     return Color(r, g, b, alpha)
 }
-
-/**
- * Parse a hex color string ("ad1e5d", "#ad1e5d", or 8-digit "aarrggbb") into a Compose [Color].
- * Returns null on malformed input.
- */
-fun String.hexToColorOrNull(): Color? =
-    runCatching {
-        val clean = removePrefix("#")
-        val argb =
-            when (clean.length) {
-                6 -> 0xFF000000L or clean.toLong(16)
-                8 -> clean.toLong(16)
-                else -> return null
-            }
-        Color(argb)
-    }.getOrNull()
 
 fun TextStyle.greyScale(): TextStyle =
     this.copy(
@@ -816,14 +394,6 @@ fun TextStyle.greyScale(): TextStyle =
 
 @Composable
 expect fun rememberIsInPipMode(): Boolean
-
-@Composable
-fun animateAlignmentAsState(targetAlignment: Alignment): State<Alignment> {
-    val biased = targetAlignment as BiasAlignment
-    val horizontal by animateFloatAsState(biased.horizontalBias)
-    val vertical by animateFloatAsState(biased.verticalBias)
-    return remember { derivedStateOf { BiasAlignment(horizontal, vertical) } }
-}
 
 @Composable
 fun PaddingValues.copy(

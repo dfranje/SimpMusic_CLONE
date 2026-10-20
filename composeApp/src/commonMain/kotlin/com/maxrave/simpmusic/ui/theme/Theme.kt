@@ -20,7 +20,6 @@ import com.materialkolor.PaletteStyle
 import com.materialkolor.rememberDynamicColorScheme
 import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.simpmusic.expect.ui.SystemBarAppearanceEffect
-import com.maxrave.simpmusic.expect.ui.platformDynamicColorScheme
 
 /**
  * Semantic colors that sit outside the Material 3 ColorScheme.
@@ -73,18 +72,6 @@ val LocalLiquidGlassEnabled = staticCompositionLocalOf { true }
  */
 val LocalForcedDarkColorScheme = staticCompositionLocalOf<ColorScheme?> { null }
 
-/** Parses "RRGGBB" or "AARRGGBB" (optionally "#"-prefixed) into a [Color]; null if malformed. */
-fun parseThemeColorHex(hex: String): Color? {
-    val clean = hex.trim().removePrefix("#")
-    val argb =
-        when (clean.length) {
-            6 -> "FF$clean"
-            8 -> clean
-            else -> return null
-        }
-    return argb.toLongOrNull(16)?.let { Color(it) }
-}
-
 /**
  * Neutral surfaces for the light theme, on a pure neutral-grey ramp (R=G=B, no seed tint);
  * primary/secondary/tertiary stay seed-derived. The page background is #FAFAFA (neutral tone 98,
@@ -119,62 +106,40 @@ private fun ColorScheme.withNeutralLightSurfaces(): ColorScheme =
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AppTheme(
-    themeMode: String = DataStoreManager.THEME_MODE_DARK,
-    themeColorSource: String = DataStoreManager.THEME_COLOR_DEFAULT,
-    customThemeColor: Color? = null,
-    liquidGlassEnabled: Boolean = true,
-    // The XYZ Launcher look, already resolved (App.kt). When set it decides day/night as well: the
-    // launcher's own while following it, otherwise the one built from [themeMode].
-    xyzPalette: XyzPalette? = null,
+    // The XYZ Launcher look, already resolved (App.kt). It decides day/night as well: the launcher's
+    // own while following it, otherwise the one built from the app's Theme mode.
+    xyzPalette: XyzPalette,
+    liquidGlassEnabled: Boolean = false,
     content:
         @Composable()
         () -> Unit,
 ) {
-    val isDark = xyzPalette?.dark ?: isDarkTheme(themeMode)
-    val wallpaperScheme =
-        if (themeColorSource == DataStoreManager.THEME_COLOR_WALLPAPER) {
-            platformDynamicColorScheme(isDark)
-        } else {
-            null
-        }
-    val seedColor =
-        when {
-            xyzPalette != null -> xyzPalette.accent
-            themeColorSource == DataStoreManager.THEME_COLOR_CUSTOM -> customThemeColor ?: seed
-            else -> seed
-        }
-    // Light pins the neutrals to a neutral-grey ramp (the seed otherwise tints them warm/cream);
-    // dark keeps the generated neutrals as they are. The XYZ look then replaces every one of those
-    // neutral roles with the launcher's own surfaces (withXyzPalette).
+    val isDark = xyzPalette.dark
+    // The launcher's surfaces then replace every neutral role of this scheme (withXyzPalette), so
+    // light only matters for the roles they leave alone.
     val generatedScheme =
         rememberDynamicColorScheme(
-            seedColor = seedColor,
+            seedColor = xyzPalette.accent,
             isDark = isDark,
             style = PaletteStyle.TonalSpot,
             modifyColorScheme = { cs -> if (isDark) cs else cs.withNeutralLightSurfaces() },
         )
-    val colorScheme =
-        if (xyzPalette != null) {
-            remember(generatedScheme, xyzPalette) { generatedScheme.withXyzPalette(xyzPalette) }
-        } else {
-            wallpaperScheme ?: generatedScheme
-        }
+    val colorScheme = remember(generatedScheme, xyzPalette) { generatedScheme.withXyzPalette(xyzPalette) }
     // Immersive screens stay dark even at light theme (see [ForceDarkContent]). Resolve their scheme
     // once here instead of letting every such subtree build a palette of its own. At day the launcher
-    // only hands over its day palette, so the XYZ night one is built here from the same accent.
-    val xyzDarkPalette = remember(xyzPalette) { xyzPalette?.let { if (it.dark) it else buildXyzPalette(it.accentIndex, dark = true) } }
-    val forcedDarkSeed = xyzDarkPalette?.accent ?: seedColor
+    // only hands over its day palette, so the night one is built here from the same accent.
+    val xyzDarkPalette = remember(xyzPalette) { if (xyzPalette.dark) xyzPalette else buildXyzPalette(xyzPalette.accentIndex, dark = true) }
     val forcedDarkScheme =
         if (isDark) {
             colorScheme
         } else {
             val generated =
                 rememberDynamicColorScheme(
-                    seedColor = forcedDarkSeed,
+                    seedColor = xyzDarkPalette.accent,
                     isDark = true,
                     style = PaletteStyle.TonalSpot,
                 )
-            if (xyzDarkPalette != null) remember(generated, xyzDarkPalette) { generated.withXyzPalette(xyzDarkPalette) } else generated
+            remember(generated, xyzDarkPalette) { generated.withXyzPalette(xyzDarkPalette) }
         }
     SystemBarAppearanceEffect(isDark)
     MaterialExpressiveTheme(

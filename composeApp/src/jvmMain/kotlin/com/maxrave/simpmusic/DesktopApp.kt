@@ -13,7 +13,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
@@ -41,7 +40,6 @@ import com.maxrave.simpmusic.extension.DesktopWindowChrome
 import com.maxrave.simpmusic.ui.component.CustomTitleBar
 import com.maxrave.simpmusic.ui.mini_player.MiniPlayerManager
 import com.maxrave.simpmusic.ui.mini_player.MiniPlayerWindow
-import com.maxrave.simpmusic.ui.theme.THEME_COLOR_XYZ
 import com.maxrave.simpmusic.ui.theme.buildXyzPalette
 import com.maxrave.simpmusic.ui.theme.isDarkTheme
 import com.maxrave.simpmusic.ui.theme.xyzAccentIndex
@@ -453,25 +451,18 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
                         ),
             ) {
                 if (!nativeTitleBar) {
-                    // The bar sits outside AppTheme, so the colours are resolved here from the
-                    // same stored setting AppTheme uses and handed down. Pure black / pure white
-                    // to match the window colour the shell paints behind the panels.
+                    // The bar sits outside AppTheme, so its colours are resolved here from the
+                    // same stored settings AppTheme uses: the launcher's darkest tone (App.kt).
                     val themeMode by sharedViewModel
                         .getThemeMode()
                         .collectAsState(DataStoreManager.THEME_MODE_DARK)
                     val isDark = isDarkTheme(themeMode)
-                    // The XYZ look paints the window in the launcher's darkest tone instead (App.kt).
-                    val themeColorSource by sharedViewModel
-                        .getThemeColorSource()
-                        .collectAsState(DataStoreManager.THEME_COLOR_DEFAULT)
                     val storedXyzAccent by sharedViewModel.getXyzAccent().collectAsState(null)
                     val xyzWindow =
-                        if (themeColorSource == THEME_COLOR_XYZ) {
-                            val index = xyzAccentIndex(xyzAccentSettingOrDefault(storedXyzAccent, canFollowLauncher = false))
-                            buildXyzPalette(index, isDark).let { it.bgBottom to it.text }
-                        } else {
-                            null
-                        }
+                        buildXyzPalette(
+                            xyzAccentIndex(xyzAccentSettingOrDefault(storedXyzAccent, canFollowLauncher = false)),
+                            isDark,
+                        )
                     CustomTitleBar(
                         title = stringResource(Res.string.app_name),
                         windowState = windowState,
@@ -479,8 +470,8 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
                         onCloseRequest = {
                             isVisible = false
                         },
-                        containerColor = xyzWindow?.first ?: if (isDark) Color.Black else Color.White,
-                        titleColor = xyzWindow?.second ?: if (isDark) Color.White else Color.Black,
+                        containerColor = xyzWindow.bgBottom,
+                        titleColor = xyzWindow.text,
                     )
                 }
 

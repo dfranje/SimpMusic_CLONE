@@ -8,10 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.hoverable
@@ -30,7 +27,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -39,7 +35,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -53,20 +48,16 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.maxrave.domain.data.model.streams.TimeLine
-import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.domain.mediaservice.handler.ControlState
 import com.maxrave.simpmusic.extension.LeftToRight
 import com.maxrave.simpmusic.ui.component.rememberHolderPainter
-import com.maxrave.simpmusic.extension.parseRichSyncWords
 import com.maxrave.simpmusic.ui.component.PlayPauseButton
-import com.maxrave.simpmusic.ui.component.RichSyncLyricsLineItem
 import com.maxrave.simpmusic.ui.component.RippleIconButton
 import com.maxrave.simpmusic.ui.icon.Favorite
 import com.maxrave.simpmusic.ui.icon.FavoriteBorder
@@ -78,9 +69,6 @@ import com.maxrave.simpmusic.ui.icon.VolumeUp
 import com.maxrave.simpmusic.ui.theme.typo
 import com.maxrave.simpmusic.viewModel.NowPlayingScreenData
 import com.maxrave.simpmusic.viewModel.UIEvent
-import org.jetbrains.compose.resources.painterResource
-import org.koin.compose.koinInject
-import simpmusic.composeapp.generated.resources.Res
 
 @Composable
 private fun MiniPlayerSeekBar(
@@ -399,64 +387,6 @@ fun MediumMiniLayout(
                     }
                 }
 
-                // Lyrics display (if available)
-                if (lyricsData != null && !lyricsData.lyrics.error && lyricsData.lyrics.lines != null) {
-                    val lyricsNowMs = rememberLyricsNowMs(timeline)
-                    val currentLine =
-                        remember(lyricsNowMs) {
-                            lyricsData.lyrics.lines?.findLast { line ->
-                                line.startTimeMs.toLongOrNull()?.let { it <= lyricsNowMs } ?: false
-                            }
-                        }
-
-                    if (currentLine != null) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (lyricsData.lyrics.syncType == "RICH_SYNCED") {
-                                val parsedLine =
-                                    remember(currentLine.words, currentLine.startTimeMs, currentLine.endTimeMs) {
-                                        val result = parseRichSyncWords(currentLine.words, currentLine.startTimeMs, currentLine.endTimeMs)
-                                        result
-                                    }
-
-                                if (parsedLine != null) {
-                                    RichSyncLyricsLineItem(
-                                        parsedLine = parsedLine,
-                                        translatedWords = null,
-                                        currentTimeMs = lyricsNowMs,
-                                        isCurrent = true,
-                                        customFontSize = typo().bodySmall.fontSize,
-                                        modifier = Modifier,
-                                    )
-                                }
-                            } else {
-                                Text(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .wrapContentHeight(
-                                                align = Alignment.CenterVertically,
-                                            ).basicMarquee(
-                                                iterations = Int.MAX_VALUE,
-                                                animationMode = MarqueeAnimationMode.Immediately,
-                                            ).focusable(),
-                                    textAlign = TextAlign.Center,
-                                    text = currentLine.words,
-                                    style = typo().bodySmall,
-                                    color = Color.White.copy(alpha = 0.9f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    fontSize = 11.sp,
-                                )
-                            }
-                        }
-                    }
-                }
 
                 // Seek bar
                 Box(
@@ -553,58 +483,6 @@ fun SquareMiniLayout(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Lyrics display (if available)
-            if (lyricsData != null && !lyricsData.lyrics.error && lyricsData.lyrics.lines != null) {
-                val lyricsNowMs = rememberLyricsNowMs(timeline)
-                val currentLine =
-                    remember(lyricsNowMs) {
-                        lyricsData.lyrics.lines?.findLast { line ->
-                            line.startTimeMs.toLongOrNull()?.let { it <= lyricsNowMs } ?: false
-                        }
-                    }
-
-                if (currentLine != null) {
-                    if (lyricsData.lyrics.syncType == "RICH_SYNCED") {
-                        val parsedLine =
-                            remember(currentLine.words, currentLine.startTimeMs, currentLine.endTimeMs) {
-                                val result = parseRichSyncWords(currentLine.words, currentLine.startTimeMs, currentLine.endTimeMs)
-                                result
-                            }
-
-                        if (parsedLine != null) {
-                            RichSyncLyricsLineItem(
-                                parsedLine = parsedLine,
-                                translatedWords = null,
-                                currentTimeMs = lyricsNowMs,
-                                isCurrent = true,
-                                customFontSize = typo().bodySmall.fontSize,
-                                modifier = Modifier.padding(horizontal = 8.dp),
-                            )
-                        }
-                    } else {
-                        Text(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp)
-                                    .wrapContentHeight(
-                                        align = Alignment.CenterVertically,
-                                    ).basicMarquee(
-                                        iterations = Int.MAX_VALUE,
-                                        animationMode = MarqueeAnimationMode.Immediately,
-                                    ).focusable(),
-                            textAlign = TextAlign.Center,
-                            text = currentLine.words,
-                            style = typo().bodySmall,
-                            color = Color.White.copy(alpha = 0.9f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            fontSize = 12.sp,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                }
-            }
 
             // Seek bar
             Box(
@@ -905,65 +783,6 @@ fun ExpandedMiniLayout(
                 }
             }
 
-            // Lyrics display below thumbnail row
-            if (lyricsData != null && !lyricsData.lyrics.error && lyricsData.lyrics.lines != null) {
-                val lyricsNowMs = rememberLyricsNowMs(timeline)
-                val currentLine =
-                    remember(lyricsNowMs) {
-                        lyricsData.lyrics.lines?.findLast { line ->
-                            line.startTimeMs.toLongOrNull()?.let { it <= lyricsNowMs } ?: false
-                        }
-                    }
-
-                if (currentLine != null) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp),
-                    ) {
-                        if (lyricsData.lyrics.syncType == "RICH_SYNCED") {
-                            val parsedLine =
-                                remember(currentLine.words, currentLine.startTimeMs, currentLine.endTimeMs) {
-                                    val result = parseRichSyncWords(currentLine.words, currentLine.startTimeMs, currentLine.endTimeMs)
-                                    result
-                                }
-
-                            if (parsedLine != null) {
-                                RichSyncLyricsLineItem(
-                                    parsedLine = parsedLine,
-                                    translatedWords = null,
-                                    currentTimeMs = lyricsNowMs,
-                                    isCurrent = true,
-                                    customFontSize = typo().bodySmall.fontSize,
-                                    customPadding = 4.dp,
-                                    modifier = Modifier,
-                                )
-                            }
-                        } else {
-                            Text(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .wrapContentHeight(
-                                            align = Alignment.CenterVertically,
-                                        ).basicMarquee(
-                                            iterations = Int.MAX_VALUE,
-                                            animationMode = MarqueeAnimationMode.Immediately,
-                                        ).focusable()
-                                        .padding(bottom = 4.dp),
-                                textAlign = TextAlign.Center,
-                                text = currentLine.words,
-                                style = typo().bodySmall,
-                                color = Color.White.copy(alpha = 0.9f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                fontSize = 11.sp,
-                            )
-                        }
-                    }
-                }
-            }
 
             // Seek bar
             Box(
@@ -991,15 +810,4 @@ private fun rememberPreviousVolume(volume: Float): Float {
         if (volume > 0f) previous = volume
     }
     return previous
-}
-
-/**
- * The moment the listener is actually HEARING, which is what a lyric line answers to. Bluetooth
- * buffers, so the ear trails the player by the stored offset. The mini player's own seek bar keeps
- * reading [TimeLine.current] untouched: that one reports where the player is, not what is heard.
- */
-@Composable
-private fun rememberLyricsNowMs(timeline: TimeLine): Long {
-    val offsetMs by koinInject<DataStoreManager>().lyricsOffsetMs.collectAsState(0)
-    return timeline.current - offsetMs
 }

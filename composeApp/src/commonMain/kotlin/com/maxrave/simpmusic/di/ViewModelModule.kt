@@ -1,22 +1,12 @@
 package com.maxrave.simpmusic.di
 
 import com.maxrave.simpmusic.viewModel.AlbumViewModel
-import com.maxrave.simpmusic.utils.VersionManager
-import com.maxrave.simpmusic.viewModel.AnalyticsViewModel
-import com.maxrave.simpmusic.viewModel.ListenTogetherSettingsViewModel
-import com.maxrave.simpmusic.viewModel.ListenTogetherViewModel
 import com.maxrave.simpmusic.viewModel.ArtistViewModel
-import com.maxrave.simpmusic.viewModel.BrowseViewModel
-import com.maxrave.simpmusic.viewModel.CommentsViewModel
-import com.maxrave.simpmusic.viewModel.HomeViewModel
 import com.maxrave.simpmusic.viewModel.ImportViewModel
 import com.maxrave.simpmusic.viewModel.LibraryDynamicPlaylistViewModel
-import com.maxrave.simpmusic.viewModel.LibraryViewModel
 import com.maxrave.simpmusic.viewModel.LocalPlaylistViewModel
 import com.maxrave.simpmusic.viewModel.LogInViewModel
-import com.maxrave.simpmusic.viewModel.MoodViewModel
 import com.maxrave.simpmusic.viewModel.MoreAlbumsViewModel
-import com.maxrave.simpmusic.viewModel.NotificationViewModel
 import com.maxrave.simpmusic.viewModel.NowPlayingBottomSheetViewModel
 import com.maxrave.simpmusic.viewModel.PlaylistViewModel
 import com.maxrave.simpmusic.viewModel.PodcastViewModel
@@ -25,8 +15,6 @@ import com.maxrave.simpmusic.viewModel.AutoEqViewModel
 import com.maxrave.simpmusic.viewModel.SettingsViewModel
 import com.maxrave.simpmusic.viewModel.SharedViewModel
 import com.maxrave.simpmusic.viewModel.SongSelectionViewModel
-import com.maxrave.simpmusic.viewModel.TasteViewModel
-import com.maxrave.simpmusic.viewModel.WrappedViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -57,7 +45,6 @@ val viewModelModule =
                 get(),
             )
         }
-        viewModel { CommentsViewModel(get(), get()) }
         viewModel {
             NowPlayingBottomSheetViewModel(
                 get(),
@@ -67,21 +54,7 @@ val viewModelModule =
             )
         }
         viewModel {
-            LibraryViewModel(
-                get(),
-                get(),
-                get(),
-                get(),
-                get(),
-                get(),
-                get(),
-                get(),
-                get(),
-            )
-        }
-        viewModel {
             LibraryDynamicPlaylistViewModel(
-                get(),
                 get(),
                 get(),
                 get(),
@@ -94,12 +67,6 @@ val viewModelModule =
         }
         viewModel {
             AlbumViewModel(
-                get(),
-                get(),
-            )
-        }
-        viewModel {
-            HomeViewModel(
                 get(),
                 get(),
             )
@@ -151,63 +118,10 @@ val viewModelModule =
             )
         }
         viewModel {
-            BrowseViewModel(
-                get(),
-            )
-        }
-        viewModel {
             LocalPlaylistViewModel(
                 get(),
                 get(),
                 get(),
             )
         }
-        viewModel {
-            NotificationViewModel(
-                get(),
-            )
-        }
-        viewModel {
-            MoodViewModel(
-                get(),
-                get(),
-            )
-        }
-        viewModel {
-            AnalyticsViewModel(
-                get(),
-                get(),
-                get(),
-                get(),
-                get(),
-            )
-        }
-        viewModel {
-            WrappedViewModel(
-                get(),
-                get(),
-                get(),
-                get(),
-            )
-        }
-        viewModel {
-            TasteViewModel(
-                get(),
-                get(),
-                get(),
-                get(),
-                get(),
-                get(),
-            )
-        }
-        viewModel {
-            ListenTogetherSettingsViewModel(get())
-        }
-        viewModel {
-            ListenTogetherViewModel(
-                repository = get(),
-                dataStore = get(),
-            )
-        }
-
     }

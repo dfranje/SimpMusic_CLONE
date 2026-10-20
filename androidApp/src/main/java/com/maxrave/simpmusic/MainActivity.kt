@@ -105,10 +105,10 @@ class MainActivity : AppCompatActivity() {
         unloadKoinModules(viewModelModule)
         loadKoinModules(viewModelModule)
         VersionManager.initialize()
-        if (viewModel.recreateActivity.value || viewModel.isServiceRunning) {
+        // The service is started and bound in onStart, which always follows; starting it here as well
+        // bound it twice on every cold start.
+        if (viewModel.recreateActivity.value) {
             viewModel.activityRecreateDone()
-        } else {
-            startMusicService()
         }
         Logger.d("MainActivity", "onCreate: ")
         val data = (intent?.data ?: intent?.getStringExtra(Intent.EXTRA_TEXT)?.toUri())?.toKmpUriOrNull()

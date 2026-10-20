@@ -35,21 +35,16 @@ import kotlin.math.pow
  * ported so SimpMusic reads as part of the same head unit — neon accent on near-black surfaces tinted
  * by that accent, cards with an accent rim and a soft glow.
  *
- * Stored as a fourth theme colour source next to Default / Wallpaper / Custom. The stored source is a
- * plain string, so [THEME_COLOR_XYZ] needs nothing from core. With the launcher installed, Android
- * follows its palette and its day/night live ([XyzPalette.fromLauncher]); without it, or on Desktop,
- * the same formulas run here on the accent picked in Settings.
+ * It is the app's only look. With the launcher installed, Android follows its palette and its
+ * day/night live ([XyzPalette.fromLauncher]); without it, or on Desktop, the same formulas run here
+ * on the accent picked in Settings.
  */
-const val THEME_COLOR_XYZ = "XYZ"
 
 /** Generic DataStore string: [XYZ_ACCENT_FOLLOW], or an index into [XyzAccents]. */
 const val XYZ_ACCENT_KEY = "xyz_accent"
 
 /** Take accent and day/night from the XYZ Launcher itself. */
 const val XYZ_ACCENT_FOLLOW = "follow"
-
-/** Written once this install has been moved onto [THEME_COLOR_XYZ] (SharedViewModel), so it never happens twice. */
-const val XYZ_THEME_ADOPTED_KEY = "xyz_theme_adopted"
 
 /** Set once the light build's defaults (see SharedViewModel.applyXyzLightDefaultsOnce) were applied. */
 const val XYZ_LIGHT_DEFAULTS_KEY = "xyz_light_defaults_v1"
@@ -108,13 +103,13 @@ data class XyzPalette(
     fun corner(base: Dp): Dp = base * cornerMul
 }
 
-/** The XYZ palette in effect, or null when the app uses one of its own theme colour sources. */
+/** The XYZ palette in effect, or null outside [AppTheme] (the Desktop mini-player window, previews). */
 val LocalXyzPalette = staticCompositionLocalOf<XyzPalette?> { null }
 
 /**
  * The app accent for the places that paint the brand colour directly rather than a scheme role (the
- * playing row, active shuffle/repeat, the accent line in the Apple Music headers, Analytics): the
- * launcher's accent in the XYZ look, [seed] everywhere else, so the other looks are unchanged.
+ * playing row, active shuffle/repeat, the sleep timer): the launcher's accent, or [seed] outside
+ * [AppTheme].
  */
 val appAccent: Color
     @Composable

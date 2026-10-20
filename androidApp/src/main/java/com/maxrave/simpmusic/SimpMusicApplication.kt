@@ -59,7 +59,8 @@ class SimpMusicApplication :
         configCrashlytics(this, BuildKonfig.sentryDsn)
         configLastfm(BuildKonfig.lastfmApiKey, BuildKonfig.lastfmSecret)
         startKoin {
-            androidLogger(level = Level.DEBUG)
+            // ERROR only: at DEBUG Koin logs every definition it creates, all on the main thread at startup.
+            androidLogger(level = Level.ERROR)
             androidContext(this@SimpMusicApplication)
             loadAllModules(
                 AppIdentity(

@@ -1,11 +1,8 @@
 package com.maxrave.simpmusic
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,13 +10,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -30,9 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,76 +34,34 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_MEDIUM_LOWER_BOUND
-import com.maxrave.common.LibraryChipType
-import com.maxrave.domain.data.player.GenericMediaItem
 import com.maxrave.domain.manager.DataStoreManager
-import com.maxrave.domain.manager.DataStoreManager.Values.TRUE
 import com.maxrave.logger.Logger
-import com.maxrave.simpmusic.expect.Orientation
-import com.maxrave.simpmusic.expect.currentOrientation
 import com.maxrave.simpmusic.expect.ui.canFollowXyzLauncher
-import com.maxrave.simpmusic.expect.ui.layerBackdrop
-import com.maxrave.simpmusic.expect.ui.rememberBackdrop
 import com.maxrave.simpmusic.expect.ui.rememberXyzLauncherPalette
-import com.maxrave.simpmusic.extension.copy
-import com.maxrave.simpmusic.ui.component.AppBottomNavigationBar
-import com.maxrave.simpmusic.ui.component.AppNavigationRail
-import com.maxrave.simpmusic.ui.component.LiquidGlassAppBottomNavigationBar
-import com.maxrave.simpmusic.ui.component.LocalAppDialogOpen
-import com.maxrave.simpmusic.ui.component.LocalNowPlayingOpen
-import com.maxrave.simpmusic.ui.component.LocalUserStarted
-import com.maxrave.simpmusic.ui.icon.ArrowForwardIos
-import com.maxrave.simpmusic.ui.icon.SimpIcons
-import com.maxrave.simpmusic.ui.navigation.destination.home.AnalyticsDestination
 import com.maxrave.simpmusic.ui.navigation.destination.home.HomeDestination
-import com.maxrave.simpmusic.ui.navigation.destination.home.NotificationDestination
-import com.maxrave.simpmusic.ui.navigation.destination.home.WrappedDestination
-import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDestination
 import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDynamicPlaylistDestination
-import com.maxrave.simpmusic.ui.navigation.destination.library.MixForYouDestination
 import com.maxrave.simpmusic.ui.navigation.destination.list.AlbumDestination
 import com.maxrave.simpmusic.ui.navigation.destination.list.ArtistDestination
 import com.maxrave.simpmusic.ui.navigation.destination.list.PlaylistDestination
-import com.maxrave.simpmusic.ui.navigation.destination.player.FullscreenDestination
+import com.maxrave.simpmusic.ui.navigation.destination.xyz.XyzFavoritesDestination
 import com.maxrave.simpmusic.ui.navigation.graph.AppNavigationGraph
-import com.maxrave.simpmusic.ui.screen.MiniPlayer
-import com.maxrave.simpmusic.ui.screen.player.NowPlayingScreen
-import com.maxrave.simpmusic.ui.screen.player.NowPlayingScreenContent
 import com.maxrave.simpmusic.ui.screen.xyz.XyzBottomBar
 import com.maxrave.simpmusic.ui.screen.xyz.XyzSideBar
 import com.maxrave.simpmusic.ui.screen.xyz.navigateXyzPage
 import com.maxrave.simpmusic.ui.theme.AppTheme
-import com.maxrave.simpmusic.viewModel.base.UserPlaybackStarts
-import com.maxrave.simpmusic.ui.theme.ForceDarkContent
-import com.maxrave.simpmusic.ui.theme.THEME_COLOR_XYZ
 import com.maxrave.simpmusic.ui.theme.XYZ_ACCENT_FOLLOW
 import com.maxrave.simpmusic.ui.theme.buildXyzPalette
-import com.maxrave.simpmusic.ui.theme.desktopPanelDark
-import com.maxrave.simpmusic.ui.theme.desktopWindowDark
-import com.maxrave.simpmusic.ui.theme.desktopWindowLight
 import com.maxrave.simpmusic.ui.theme.isDarkTheme
-import com.maxrave.simpmusic.ui.theme.parseThemeColorHex
 import com.maxrave.simpmusic.ui.theme.typo
 import com.maxrave.simpmusic.ui.theme.xyzAccentIndex
 import com.maxrave.simpmusic.ui.theme.xyzAccentSettingOrDefault
-import com.maxrave.simpmusic.utils.isAppLinkAvailable
-import com.maxrave.simpmusic.utils.libraryTabOf
 import com.maxrave.simpmusic.viewModel.SharedViewModel
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
-import kotlinx.coroutines.flow.first
+import com.maxrave.simpmusic.viewModel.base.UserPlaybackStarts
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -126,6 +77,13 @@ import simpmusic.composeapp.generated.resources.this_link_is_not_supported
 import simpmusic.composeapp.generated.resources.yes
 import kotlin.time.ExperimentalTime
 
+/**
+ * The app is the XYZ Launcher shell and nothing else (XyzShell.kt): Home is the player, the sidebar
+ * (or, upright on a phone, the bottom bar) holds Home, Artists, Songs, Favorites and Settings.
+ *
+ * The look does not wait for a stored setting: it is drawn from the very first frame, in the
+ * default accent until the stored one (or the launcher's palette) arrives a moment later.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class, ExperimentalFoundationApi::class)
 @Composable
 fun App(
@@ -139,97 +97,30 @@ fun App(
     val isDesktopShell = getPlatform() == Platform.Desktop
 
     val sleepTimerState by viewModel.sleepTimerState.collectAsStateWithLifecycle()
-    val nowPlayingData by viewModel.nowPlayingState.collectAsStateWithLifecycle()
     val intent by viewModel.intent.collectAsStateWithLifecycle()
-    val showNotificationPermissionDialog by viewModel.showNotificationPermissionDialog.collectAsStateWithLifecycle()
-
-    val isLiquidGlassEnabled by viewModel.getEnableLiquidGlass().collectAsStateWithLifecycle(DataStoreManager.FALSE)
-    // Analytics only makes sense with local tracking on, so its tab follows that setting.
-    val isLocalTrackingEnabled by viewModel.getLocalTrackingEnabled().collectAsStateWithLifecycle(DataStoreManager.FALSE)
-    val showAnalyticsTab = isLocalTrackingEnabled == TRUE
-    // Mix for you comes from the signed-in YouTube account, so its tab follows the session — the
-    // same condition that used to hide the chip inside Library.
-    val isYouTubeLoggedIn by viewModel.getYouTubeLoggedIn().collectAsStateWithLifecycle(DataStoreManager.FALSE)
-    val showMixForYouTab = isYouTubeLoggedIn == TRUE
 
     val themeMode by viewModel.getThemeMode().collectAsStateWithLifecycle(DataStoreManager.THEME_MODE_DARK)
-    val themeColorSource by viewModel.getThemeColorSource().collectAsStateWithLifecycle(DataStoreManager.THEME_COLOR_DEFAULT)
-    val customThemeColorHex by viewModel.getCustomThemeColor().collectAsStateWithLifecycle(DataStoreManager.DEFAULT_THEME_COLOR_HEX)
-    // The XYZ Launcher look: the launcher's own palette and day/night while following it (Android, with
-    // the launcher installed), otherwise the launcher's formulas on the picked accent and this app's mode.
+    // The launcher's own palette and day/night while following it (Android, with the launcher
+    // installed), otherwise the launcher's formulas on the picked accent and this app's mode.
     val storedXyzAccent by viewModel.getXyzAccent().collectAsStateWithLifecycle(null)
-    val isXyzTheme = themeColorSource == THEME_COLOR_XYZ
     val xyzAccent = xyzAccentSettingOrDefault(storedXyzAccent, canFollowXyzLauncher())
-    val launcherPalette = rememberXyzLauncherPalette(enabled = isXyzTheme && xyzAccent == XYZ_ACCENT_FOLLOW)
+    val launcherPalette = rememberXyzLauncherPalette(enabled = xyzAccent == XYZ_ACCENT_FOLLOW)
     val xyzDarkFromMode = isDarkTheme(themeMode)
     val xyzPalette =
-        remember(isXyzTheme, launcherPalette, xyzAccent, xyzDarkFromMode) {
-            if (isXyzTheme) launcherPalette ?: buildXyzPalette(xyzAccentIndex(xyzAccent), xyzDarkFromMode) else null
+        remember(launcherPalette, xyzAccent, xyzDarkFromMode) {
+            launcherPalette ?: buildXyzPalette(xyzAccentIndex(xyzAccent), xyzDarkFromMode)
         }
-    // The XYZ look also brings the launcher's shell: Home is the player, the sidebar holds Home,
-    // Artists, Songs, Favorites and Settings, and a small bar stands in for the mini player.
-    val isXyzShell = xyzPalette != null
-    // MiniPlayer visibility: derived, never stored.
-    //
-    // This used to be a rememberSaveable Boolean written by a LaunchedEffect. Two things went
-    // wrong with that. The effect only runs AFTER the first composition, so the first frame drew
-    // whatever the initial value said — and rememberSaveable RESTORES a previously saved value,
-    // so flipping that initial value from true to false changed nothing on a process that had
-    // already saved true. The bar therefore showed, hid, and showed again on every start.
-    //
-    // Reading it straight from nowPlayingData removes both failure modes: there is no first-frame
-    // guess to be wrong, and no saved copy to disagree with the source.
-    val isShowMiniPlayer by remember {
-        derivedStateOf {
-            val item = nowPlayingData?.mediaItem
-            item != null && item != GenericMediaItem.EMPTY
-        }
-    }
-
-    // Now playing screen
-    var isShowNowPlaylistScreen by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    // Fullscreen
-    var isInFullscreen by rememberSaveable {
-        mutableStateOf(false)
-    }
 
     var isNavBarVisible by rememberSaveable {
         mutableStateOf(true)
     }
-
-
-    // Every dialog this file raises on its own. Home's launch banner waits until none is up; see
-    // LocalAppDialogOpen. (The banner waits for a running update check by itself.)
-    val appDialogOpen =
-        showNotificationPermissionDialog ||
-            showDesktopNotificationPermissionDialog || sleepTimerState.isDone
-
-    // Set by the first press or wheel scroll anywhere in the app this launch, or by opening Now
-    // Playing. A launch banner that has not had its turn yet then waits for a later launch.
-    var userStarted by remember {
-        mutableStateOf(false)
-    }
-    LaunchedEffect(isShowNowPlaylistScreen) {
-        if (isShowNowPlaylistScreen) userStarted = true
-    }
-
-    val hazeState =
-        rememberHazeState()
 
     LaunchedEffect(intent) {
         val intent = intent ?: return@LaunchedEffect
         val data = intent.data
         Logger.d("MainActivity", "onCreate: $data")
         if (data != null) {
-            if (data.scheme == "simpmusic" && data.host == "notification") {
-                viewModel.setIntent(null)
-                navController.navigate(
-                    NotificationDestination,
-                )
-            } else if (data.scheme == "wordbyword" && data.host == "lastfm-auth") {
+            if (data.scheme == "wordbyword" && data.host == "lastfm-auth") {
                 // Last.fm sends the user back here after they approve access, carrying the request
                 // token: wordbyword://lastfm-auth?token=xxx. The callback is fixed on the API
                 // account, which is why the scheme is not "simpmusic".
@@ -258,13 +149,6 @@ fun App(
                         segments.getOrNull(1)
                     }
                 Logger.d("MainActivity", "simpmusic.org deep link, appPath: $appPath")
-                // A path added to the when below must also go into APP_LINK_PATHS in AppLinks.kt.
-                // Some screens exist only with local tracking on or while signed in to YouTube; see
-                // isAppLinkAvailable. Read before setIntent(null): clearing the intent changes this
-                // effect's key, and the next frame cancels the effect wherever it is suspended, which
-                // would lose a navigation waiting on these reads.
-                val localTrackingOn = viewModel.getLocalTrackingEnabled().first() == TRUE
-                val youTubeLoggedIn = viewModel.getYouTubeLoggedIn().first() == TRUE
                 viewModel.setIntent(null)
                 when (appPath) {
                     "watch" -> {
@@ -309,45 +193,14 @@ fun App(
                         }
                     }
 
-                    // simpmusic://library                     → the Library tab
-                    // simpmusic://library?type=favorite       → one of its collections
-                    // Added for the Playlists widget, whose shortcuts have to reach these
-                    // screens from the home screen without the app already running.
+                    // simpmusic://library?type=favorite → one of the library collections. A bare
+                    // simpmusic://library opens Favorites, the XYZ shell's own library page.
                     "library" -> {
                         val type = data.getQueryParameter("type")
                         if (type.isNullOrBlank()) {
-                            // simpmusic://library?tab=wrapped → the Library tab on one of its chips,
-                            // named as LibraryChipType stores them (a launch banner points at Wrapped).
-                            val tab = libraryTabOf(data)
-                            if (!isAppLinkAvailable(appPath, tab, localTrackingOn, youTubeLoggedIn)) {
-                                viewModel.makeToast(getString(Res.string.this_link_is_not_supported))
-                            } else {
-                                viewModel.requestLibraryTab(tab)
-                                navController.navigate(LibraryDestination)
-                            }
+                            navController.navigateXyzPage(XyzFavoritesDestination)
                         } else {
                             navController.navigate(LibraryDynamicPlaylistDestination(type = type))
-                        }
-                    }
-
-                    // simpmusic://analytics — added for the launch banners.
-                    "analytics" -> {
-                        if (isAppLinkAvailable(appPath, null, localTrackingOn, youTubeLoggedIn)) {
-                            navController.navigate(AnalyticsDestination)
-                        } else {
-                            viewModel.makeToast(getString(Res.string.this_link_is_not_supported))
-                        }
-                    }
-
-                    // simpmusic://taste — the AI taste card, which sits on Your library. A link of its
-                    // own rather than library?tab=your_library, so it can say that the card exists only
-                    // while local tracking is on.
-                    "taste" -> {
-                        if (isAppLinkAvailable(appPath, null, localTrackingOn, youTubeLoggedIn)) {
-                            viewModel.requestLibraryTab(LibraryChipType.YOUR_LIBRARY)
-                            navController.navigate(LibraryDestination)
-                        } else {
-                            viewModel.makeToast(getString(Res.string.this_link_is_not_supported))
                         }
                     }
 
@@ -418,125 +271,17 @@ fun App(
         }
     }
 
-
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
     // Picking a song anywhere lands on the player, which in this shell is Home.
-    LaunchedEffect(isXyzShell) {
-        if (!isXyzShell) return@LaunchedEffect
+    LaunchedEffect(Unit) {
         UserPlaybackStarts.events.collect { navController.navigateXyzPage(HomeDestination) }
     }
-    // Everything that used to raise the Now Playing sheet opens Home instead: in the XYZ shell, Home
-    // is the player, and there are no lyrics or player styles for the sheet to offer.
-    LaunchedEffect(isShowNowPlaylistScreen, isXyzShell) {
-        if (isXyzShell && isShowNowPlaylistScreen) {
-            isShowNowPlaylistScreen = false
-            navController.navigateXyzPage(HomeDestination)
-        }
-    }
-    LaunchedEffect(navBackStackEntry) {
-        Logger.d("MainActivity", "Current destination: ${navBackStackEntry?.destination?.route}")
-        if (navBackStackEntry?.destination?.route?.contains("FullscreenDestination") == true) {
-            isShowNowPlaylistScreen = false
-        }
-        // Wrapped counts as fullscreen for the same reason the video player does: it is a
-        // full-bleed reel, and the rail and the mini player would sit on top of the card the user
-        // is meant to be reading — and on top of every card captured as a share image.
-        isInFullscreen = navBackStackEntry?.destination?.hierarchy?.any {
-            it.hasRoute(FullscreenDestination::class) || it.hasRoute(WrappedDestination::class)
-        } == true
-    }
-    LaunchedEffect(showAnalyticsTab) {
-        // Turning tracking off removes the Analytics tab, so leaving the user standing on it would
-        // strand them on a screen no tab points at anymore.
-        if (!showAnalyticsTab &&
-            navBackStackEntry?.destination?.hierarchy?.any {
-                it.hasRoute(AnalyticsDestination::class)
-            } == true
-        ) {
-            navController.navigate(HomeDestination) {
-                popUpTo(navController.graph.startDestinationId) {
-                    saveState = true
-                }
-                launchSingleTop = true
-                restoreState = true
-            }
-        }
-    }
-    LaunchedEffect(showMixForYouTab) {
-        // Same for signing out of YouTube: the Mix for you tab goes away, so nobody may be left
-        // standing on a screen that has no mixes to show and no tab pointing at it.
-        if (!showMixForYouTab &&
-            navBackStackEntry?.destination?.hierarchy?.any {
-                it.hasRoute(MixForYouDestination::class)
-            } == true
-        ) {
-            navController.navigate(HomeDestination) {
-                popUpTo(navController.graph.startDestinationId) {
-                    saveState = true
-                }
-                launchSingleTop = true
-                restoreState = true
-            }
-        }
-    }
-    var isScrolledToTop by rememberSaveable {
-        mutableStateOf(false)
-    }
     val isTablet = windowSize.isWidthAtLeastBreakpoint(WIDTH_DP_MEDIUM_LOWER_BOUND)
-    val isTabletLandscape = isTablet && currentOrientation() == Orientation.LANDSCAPE
 
-    AppTheme(
-        themeMode = themeMode,
-        themeColorSource = themeColorSource,
-        customThemeColor = parseThemeColorHex(customThemeColorHex),
-        // Desktop is unconditionally true — the liquid-glass setting row is Android-only, and the
-        // Desktop capsule player is glass by design. Same rule as MiniPlayer's useGlassSurface.
-        liquidGlassEnabled = isLiquidGlassEnabled == TRUE || getPlatform() == Platform.Desktop,
-        xyzPalette = xyzPalette,
-    ) {
-        // Read inside AppTheme so MaterialTheme reflects the resolved scheme.
-        val isLightScheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
-
-        // The desktop shell is a window colour with panels floating on it. The two schemes mirror
-        // each other: the window takes the extreme (pure black / pure white) and the panel steps
-        // one shade back towards the middle, so the panels read as raised either way.
-        // The XYZ look keeps the same layering in the launcher's own tones: the window takes the
-        // darkest end of its gradient, the panel the page.
-        val desktopWindow =
-            when {
-                xyzPalette != null -> xyzPalette.bgBottom
-                isLightScheme -> desktopWindowLight
-                else -> desktopWindowDark
-            }
-        val desktopPanel =
-            when {
-                xyzPalette != null -> MaterialTheme.colorScheme.background
-                isLightScheme -> MaterialTheme.colorScheme.surfaceContainer
-                else -> desktopPanelDark
-            }
-
-        // Backdrop base must match the page, so glass over an empty area reads as the page itself.
-        // On Desktop the page is the panel: its colour is painted outside the recorded layer, and
-        // colorScheme.background carries the seed's hue, which the glass's saturation boost brings out.
-        val backdrop = rememberBackdrop(if (isDesktopShell) desktopPanel else MaterialTheme.colorScheme.background)
+    AppTheme(xyzPalette = xyzPalette) {
         Scaffold(
-            // Watches for userStarted without consuming anything. Dialogs and sheets are windows or
-            // layers of their own, so a press inside one (closing the update dialog, say) does not count.
-            modifier =
-                Modifier.pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (!userStarted) {
-                            val type = awaitPointerEvent(PointerEventPass.Initial).type
-                            if (type == PointerEventType.Press || type == PointerEventType.Scroll) {
-                                userStarted = true
-                            }
-                        }
-                    }
-                },
-            containerColor =
-                if (isDesktopShell) desktopWindow else MaterialTheme.colorScheme.background,
+            containerColor = if (isDesktopShell) xyzPalette.bgBottom else MaterialTheme.colorScheme.background,
             bottomBar = {
-                if (!isTablet && isXyzShell) {
+                if (!isTablet) {
                     AnimatedVisibility(
                         isNavBarVisible,
                         enter = fadeIn(),
@@ -544,273 +289,40 @@ fun App(
                     ) {
                         XyzBottomBar(navController)
                     }
-                } else if (!isTablet) {
-                    AnimatedVisibility(
-                        isNavBarVisible,
-                        enter = fadeIn() + slideInHorizontally(),
-                        exit = fadeOut(),
-                    ) {
-                        // On Android both materials go through the folding bar, which draws the mini
-                        // player itself. Desktop keeps the always-open flat bar under its own one.
-                        val useFoldingBar = getPlatform() == Platform.Android || isLiquidGlassEnabled == TRUE
-                        Column {
-                            AnimatedVisibility(
-                                isShowMiniPlayer && !useFoldingBar && isLiquidGlassEnabled == DataStoreManager.FALSE,
-                                enter = fadeIn() + slideInHorizontally(),
-                                exit = fadeOut(),
-                            ) {
-                                MiniPlayer(
-                                    Modifier
-                                        // 56dp card + the 4dp gap below.
-                                        .height(60.dp)
-                                        .fillMaxWidth()
-                                        .padding(
-                                            // The bottom bar's own 16dp, so both edges line up.
-                                            horizontal = 16.dp,
-                                        ).padding(
-                                            bottom = 4.dp,
-                                        ),
-                                    backdrop = backdrop,
-                                    navController = navController,
-                                    onClick = {
-                                        isShowNowPlaylistScreen = true
-                                    },
-                                    onClose = {
-                                        viewModel.stopPlayer()
-                                        viewModel.isServiceRunning = false
-                                    },
-                                )
-                            }
-                            if (useFoldingBar) {
-                                LiquidGlassAppBottomNavigationBar(
-                                    navController = navController,
-                                    backdrop = backdrop,
-                                    viewModel = viewModel,
-                                    onOpenNowPlaying = { isShowNowPlaylistScreen = true },
-                                    isScrolledToTop = isScrolledToTop,
-                                    showAnalyticsTab = showAnalyticsTab,
-                                    showMixForYouTab = showMixForYouTab,
-                                    liquidGlass = isLiquidGlassEnabled == TRUE,
-                                ) { klass ->
-                                    viewModel.reloadDestination(klass)
-                                }
-                            } else {
-                                AppBottomNavigationBar(
-                                    navController = navController,
-                                    showAnalyticsTab = showAnalyticsTab,
-                                    showMixForYouTab = showMixForYouTab,
-                                ) { klass ->
-                                    viewModel.reloadDestination(klass)
-                                }
-                            }
-                        }
-                    }
                 }
             },
             content = { innerPadding ->
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .then(
-                            if (isLiquidGlassEnabled == TRUE && !isTablet) {
-                                Modifier.layerBackdrop(backdrop)
-                            } else {
-                                Modifier
-                            },
-                        ),
-                ) {
-                    Row(
-                        Modifier.fillMaxSize(),
-                    ) {
-                        if (isTablet && !isInFullscreen && isXyzShell) {
-                            XyzSideBar(navController)
-                        } else if (isTablet && !isInFullscreen) {
-                            AppNavigationRail(
-                                navController = navController,
-                                showAnalyticsTab = showAnalyticsTab,
-                                showMixForYouTab = showMixForYouTab,
-                            ) { klass ->
-                                viewModel.reloadDestination(klass)
-                            }
-                        }
-                        // Desktop only: the content sits in its own rounded panel floating on a
-                        // pure black window, Spotify style, while the rail stays flat black
-                        // outside it. Phones keep one continuous surface — the inset only reads
-                        // as deliberate when there is a window frame around it.
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .weight(1f)
-                                .then(
-                                    if (isDesktopShell) {
-                                        Modifier
-                                            .padding(8.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(desktopPanel)
-                                    } else {
-                                        Modifier
-                                    },
-                                ),
-                        ) {
-                            Box(
-                                Modifier
-                                    .fillMaxSize()
-                                    .then(
-                                        // Desktop is unconditional: the floating capsule player is ALWAYS
-                                        // liquid glass there, and glass with no recorded source draws as
-                                        // plain transparency. Gating the source on the setting while the
-                                        // capsule ignored it was exactly the nested-flag split that kept
-                                        // the capsule see-through.
-                                        if ((isLiquidGlassEnabled == TRUE || getPlatform() == Platform.Desktop) &&
-                                            isTablet &&
-                                            !isInFullscreen
-                                        ) {
-                                            Modifier.layerBackdrop(backdrop)
-                                        } else {
-                                            Modifier
-                                        },
-                                    ).hazeSource(hazeState),
-                            ) {
-                                CompositionLocalProvider(
-                                    LocalAppDialogOpen provides appDialogOpen,
-                                    LocalNowPlayingOpen provides isShowNowPlaylistScreen,
-                                    LocalUserStarted provides userStarted,
-                                ) {
-                                    AppNavigationGraph(
-                                        innerPadding = innerPadding,
-                                        navController = navController,
-                                        hideNavBar = {
-                                            isNavBarVisible = false
-                                        },
-                                        showNavBar = {
-                                            isNavBarVisible = true
-                                        },
-                                        showNowPlayingSheet = {
-                                            isShowNowPlaylistScreen = true
-                                        },
-                                        onScrolling = {
-                                            isScrolledToTop = it
-                                        },
-                                    )
-                                }
-                            }
-                            this@Row.AnimatedVisibility(
-                                modifier =
-                                    Modifier
-                                        .padding(innerPadding)
-                                        .align(Alignment.BottomCenter),
-                                visible = isShowMiniPlayer && isTablet && !isInFullscreen && !isXyzShell,
-                                enter = fadeIn() + slideInHorizontally(),
-                                exit = fadeOut(),
-                            ) {
-                                MiniPlayer(
-                                    if (getPlatform() == Platform.Android) {
-                                        Modifier
-                                            // Glass keeps its 52dp card; the flat one is 56dp.
-                                            .height(if (isLiquidGlassEnabled == TRUE) 56.dp else 60.dp)
-                                            .fillMaxWidth(0.8f)
-                                            .padding(
-                                                horizontal = 12.dp,
-                                            ).padding(
-                                                bottom = 4.dp,
-                                            )
-                                    } else {
-                                        // Floating capsule, Apple Music style: a fixed size so it never
-                                        // stretches to the window width, and no haze at all — the capsule
-                                        // paints its own liquid glass. Layering haze underneath blurs the
-                                        // same pixels twice and reads as a dark smear, not glass.
-                                        // padding BEFORE height: the other way round the bottom margin
-                                        // eats into the 72dp and the capsule ends up 52dp tall.
-                                        // 60dp is the floor for this layout: the content row is centred
-                                        // on the capsule's axis and the 16dp progress box hangs off the
-                                        // bottom, so the height has to cover the taller of the artwork
-                                        // (32dp) and the two text lines (~33dp), plus that 16dp, plus a
-                                        // gap. Going lower means shrinking the artwork again.
-                                        Modifier
-                                            .wrapContentWidth()
-                                            .padding(bottom = 20.dp)
-                                            .height(60.dp)
-                                    },
-                                    backdrop = backdrop,
-                                    navController = navController,
-                                    onClick = {
-                                        isShowNowPlaylistScreen = true
-                                    },
-                                    onClose = {
-                                        viewModel.stopPlayer()
-                                        viewModel.isServiceRunning = false
-                                    },
-                                    // The page lives in the Now Playing panel, so the panel opens with it.
-                                    onOpenFullscreenLyrics = {
-                                        viewModel.requestFullscreenLyrics()
-                                        isShowNowPlaylistScreen = true
-                                    },
-                                )
-                            }
-                        }
-                        if (isTablet && isTabletLandscape && !isInFullscreen && !isXyzShell) {
-                            AnimatedVisibility(
-                                isShowNowPlaylistScreen,
-                                enter = expandHorizontally() + fadeIn(),
-                                exit = fadeOut() + shrinkHorizontally(),
-                            ) {
-                                Row(
-                                    Modifier
-                                        .fillMaxHeight()
-                                        .fillMaxWidth(0.35f),
-                                ) {
-                                    Spacer(Modifier.width(8.dp))
-                                    Box(
-                                        Modifier
-                                            .padding(
-                                                innerPadding.copy(
-                                                    start = 0.dp,
-                                                    top = 0.dp,
-                                                    bottom = 0.dp,
-                                                ),
-                                            ).then(
-                                                // Matches the inset of the content panel so the two
-                                                // read as a pair of floating cards, not one panel
-                                                // with a seam down the middle.
-                                                if (isDesktopShell) {
-                                                    Modifier.padding(top = 8.dp, end = 8.dp, bottom = 8.dp)
-                                                } else {
-                                                    Modifier
-                                                },
-                                            ).clip(
-                                                RoundedCornerShape(12.dp),
-                                            ).then(
-                                                if (isDesktopShell) {
-                                                    Modifier.background(desktopPanel)
-                                                } else {
-                                                    Modifier
-                                                },
-                                            ),
-                                    ) {
-                                        ForceDarkContent {
-                                            NowPlayingScreenContent(
-                                                navController = navController,
-                                                sharedViewModel = viewModel,
-                                                isExpanded = true,
-                                                dismissIcon = SimpIcons.ArrowForwardIos,
-                                            ) {
-                                                isShowNowPlaylistScreen = false
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                Row(Modifier.fillMaxSize()) {
+                    if (isTablet) {
+                        XyzSideBar(navController)
                     }
-                }
-
-                if (isShowNowPlaylistScreen && !isTabletLandscape && !isXyzShell) {
-                    ForceDarkContent {
-                        NowPlayingScreen(
+                    // Desktop only: the content sits in its own rounded panel on the window's
+                    // darkest tone. Phones and head units keep one continuous surface.
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .weight(1f)
+                            .then(
+                                if (isDesktopShell) {
+                                    Modifier
+                                        .padding(8.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.background)
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                    ) {
+                        AppNavigationGraph(
+                            innerPadding = innerPadding,
                             navController = navController,
-                        ) {
-                            isShowNowPlaylistScreen = false
-                        }
+                            hideNavBar = {
+                                isNavBarVisible = false
+                            },
+                            showNavBar = {
+                                isNavBarVisible = true
+                            },
+                        )
                     }
                 }
 
@@ -850,55 +362,33 @@ fun App(
                     )
                 }
 
-
-                if (showNotificationPermissionDialog || showDesktopNotificationPermissionDialog) {
+                // Desktop only: Android no longer asks for the notification permission.
+                if (showDesktopNotificationPermissionDialog) {
                     var doNotShowAgain by remember { mutableStateOf(false) }
-                    val dismissPermissionDialog = {
-                        if (showDesktopNotificationPermissionDialog) {
-                            onDismissDesktopNotificationPermissionDialog(doNotShowAgain)
-                        } else {
-                            viewModel.dismissNotificationPermissionDialog(doNotShowAgain)
-                        }
-                    }
                     AlertDialog(
                         onDismissRequest = {
-                            dismissPermissionDialog()
+                            onDismissDesktopNotificationPermissionDialog(doNotShowAgain)
                         },
                         confirmButton = {
                             TextButton(
                                 onClick = {
-                                    if (showDesktopNotificationPermissionDialog) {
-                                        onOpenDesktopNotificationSettings(doNotShowAgain)
-                                    } else {
-                                        viewModel.dismissNotificationPermissionDialog(doNotShowAgain)
-                                    }
+                                    onOpenDesktopNotificationSettings(doNotShowAgain)
                                 },
                             ) {
                                 Text(
-                                    stringResource(
-                                        if (showDesktopNotificationPermissionDialog) {
-                                            Res.string.settings
-                                        } else {
-                                            Res.string.yes
-                                        },
-                                    ),
+                                    stringResource(Res.string.settings),
                                     style = typo().bodySmall,
                                 )
                             }
                         },
-                        dismissButton =
-                            if (showDesktopNotificationPermissionDialog) {
-                                {
-                                    TextButton(onClick = dismissPermissionDialog) {
-                                        Text(
-                                            stringResource(Res.string.cancel),
-                                            style = typo().bodySmall,
-                                        )
-                                    }
-                                }
-                            } else {
-                                null
-                            },
+                        dismissButton = {
+                            TextButton(onClick = { onDismissDesktopNotificationPermissionDialog(doNotShowAgain) }) {
+                                Text(
+                                    stringResource(Res.string.cancel),
+                                    style = typo().bodySmall,
+                                )
+                            }
+                        },
                         title = {
                             Text(
                                 stringResource(Res.string.notification),

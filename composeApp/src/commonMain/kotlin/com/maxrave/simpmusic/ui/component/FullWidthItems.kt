@@ -9,7 +9,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -47,9 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -61,19 +58,12 @@ import coil3.compose.LocalPlatformContext
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.maxrave.domain.data.entities.AlbumEntity
 import com.maxrave.domain.data.entities.ArtistEntity
 import com.maxrave.domain.data.entities.DownloadState
-import com.maxrave.domain.data.entities.LocalPlaylistEntity
-import com.maxrave.domain.data.entities.PlaylistEntity
-import com.maxrave.domain.data.entities.PodcastsEntity
 import com.maxrave.domain.data.entities.SongEntity
 import com.maxrave.domain.data.model.browse.album.Track
-import com.maxrave.domain.data.model.searchResult.albums.AlbumsResult
 import com.maxrave.domain.data.model.searchResult.artists.ArtistsResult
-import com.maxrave.domain.data.model.searchResult.playlists.PlaylistsResult
 import com.maxrave.domain.data.type.ArtistType
-import com.maxrave.domain.data.type.PlaylistType
 import com.maxrave.domain.repository.SongRepository
 import com.maxrave.domain.utils.connectArtists
 import com.maxrave.domain.utils.isLive
@@ -83,7 +73,6 @@ import com.maxrave.simpmusic.ui.icon.Check
 import com.maxrave.simpmusic.ui.icon.DownloadForOffline
 import com.maxrave.simpmusic.ui.icon.DragHandle
 import com.maxrave.simpmusic.ui.icon.MoreVert
-import com.maxrave.simpmusic.ui.icon.PushPin
 import com.maxrave.simpmusic.ui.icon.QueueMusic
 import com.maxrave.simpmusic.ui.icon.SimpIcons
 import com.maxrave.simpmusic.ui.icon.SkipNext
@@ -91,18 +80,13 @@ import com.maxrave.simpmusic.ui.theme.LocalForceDarkText
 import com.maxrave.simpmusic.ui.theme.appAccent
 import com.maxrave.simpmusic.ui.theme.typo
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import simpmusic.composeapp.generated.resources.Res
 import simpmusic.composeapp.generated.resources.add_to_queue
-import simpmusic.composeapp.generated.resources.album
 import simpmusic.composeapp.generated.resources.artists
 import simpmusic.composeapp.generated.resources.play_next
 import simpmusic.composeapp.generated.resources.playlist
-import simpmusic.composeapp.generated.resources.podcasts
-import simpmusic.composeapp.generated.resources.radio
-import simpmusic.composeapp.generated.resources.you
 import kotlin.math.roundToInt
 
 /**
@@ -512,182 +496,6 @@ fun SuggestItems(
                     onAddClickListener ?: {
                     },
             )
-        }
-    }
-}
-
-@Composable
-fun PlaylistFullWidthItems(
-    data: PlaylistType,
-    onClickListener: (() -> Unit)? = null,
-    rightView: @Composable (() -> Unit)? = null,
-    modifier: Modifier = Modifier,
-    forceDark: Boolean = LocalForceDarkText.current,
-) {
-    val contentColor = if (forceDark) Color.White else MaterialTheme.colorScheme.onSurface
-    val subtitleColor = if (forceDark) Color(0xC4FFFFFF) else MaterialTheme.colorScheme.onSurfaceVariant
-    Box(
-        modifier =
-            modifier
-                .clickable {
-                    onClickListener?.invoke()
-                }.animateContentSize(),
-    ) {
-        var title = ""
-        var thumb = ""
-        var firstSubtitle = ""
-        var secondSubtitle = ""
-        var thirdRowSubtitle: String? = null
-
-        var shouldPin = false
-
-        firstSubtitle =
-            when (data.playlistType()) {
-                PlaylistType.Type.YOUTUBE_PLAYLIST -> stringResource(Res.string.playlist)
-                PlaylistType.Type.RADIO -> stringResource(Res.string.radio)
-                PlaylistType.Type.LOCAL -> stringResource(Res.string.playlist)
-                PlaylistType.Type.ALBUM -> stringResource(Res.string.album)
-                PlaylistType.Type.PODCAST -> stringResource(Res.string.podcasts)
-            }
-        when (data) {
-            is AlbumEntity -> {
-                title = data.title
-                thumb = data.thumbnails ?: ""
-                secondSubtitle = data.artistName?.connectArtists() ?: ""
-                thirdRowSubtitle = data.year
-            }
-
-            is PlaylistEntity -> {
-                title = data.title
-                thumb = data.thumbnails
-                secondSubtitle = data.author ?: ""
-                if (data.description == "PIN") { // LIKED MUSIC
-                    shouldPin = true
-                }
-            }
-
-            is LocalPlaylistEntity -> {
-                title = data.title
-                thumb = data.thumbnail ?: ""
-                secondSubtitle = stringResource(Res.string.you)
-            }
-
-            is PlaylistsResult -> {
-                title = data.title
-                thumb = data.thumbnails.lastOrNull()?.url ?: ""
-                secondSubtitle = data.author
-            }
-
-            is AlbumsResult -> {
-                title = data.title
-                thumb = data.thumbnails.lastOrNull()?.url ?: ""
-                secondSubtitle = data.artists.toListName().connectArtists()
-                thirdRowSubtitle = data.year
-            }
-
-            is PodcastsEntity -> {
-                title = data.title
-                thumb = data.thumbnail ?: ""
-                secondSubtitle = data.authorName
-                thirdRowSubtitle = data.description
-            }
-        }
-        Row(
-            Modifier
-                .padding(vertical = 10.dp, horizontal = 15.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Spacer(modifier = Modifier.width(8.dp))
-            Box(modifier = Modifier.size(48.dp)) {
-                AsyncImage(
-                    model =
-                        ImageRequest
-                            .Builder(LocalPlatformContext.current)
-                            .data(thumb)
-                            .diskCachePolicy(CachePolicy.ENABLED)
-                            .diskCacheKey(thumb)
-                            .crossfade(true)
-                            .build(),
-                    placeholder = rememberHolderPainter(),
-                    error = rememberHolderPainter(),
-                    contentDescription = null,
-                    contentScale = ContentScale.FillWidth,
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(4.dp)),
-                )
-            }
-            Column(
-                Modifier
-                    .weight(1f)
-                    .padding(start = 12.dp, end = 10.dp)
-                    .align(Alignment.CenterVertically),
-            ) {
-                Text(
-                    text = title,
-                    style = typo().titleSmall,
-                    maxLines = 1,
-                    color = contentColor,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(align = Alignment.CenterVertically)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                animationMode = MarqueeAnimationMode.Immediately,
-                            ).focusable(),
-                )
-
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (shouldPin) {
-                        Image(
-                            imageVector = SimpIcons.PushPin,
-                            contentDescription = null,
-                            colorFilter = ColorFilter.tint(if (forceDark) Color.Cyan else MaterialTheme.colorScheme.primary),
-                            modifier =
-                                Modifier
-                                    .rotate(30f)
-                                    .size(16.dp),
-                        )
-                    }
-                    Text(
-                        text = "$firstSubtitle ${if (secondSubtitle.isNotEmpty()) " • $secondSubtitle" else ""}",
-                        style = typo().bodySmall,
-                        maxLines = 1,
-                        color = subtitleColor,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .wrapContentHeight(align = Alignment.CenterVertically)
-                                .basicMarquee(
-                                    iterations = Int.MAX_VALUE,
-                                    animationMode = MarqueeAnimationMode.Immediately,
-                                ).focusable(),
-                    )
-                }
-
-                if (thirdRowSubtitle != null) {
-                    Text(
-                        text = thirdRowSubtitle,
-                        style = typo().bodySmall,
-                        maxLines = 1,
-                        color = subtitleColor,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .wrapContentHeight(align = Alignment.CenterVertically)
-                                .basicMarquee(
-                                    iterations = Int.MAX_VALUE,
-                                    animationMode = MarqueeAnimationMode.Immediately,
-                                ).focusable(),
-                    )
-                }
-            }
-            if (rightView != null) {
-                rightView()
-            }
         }
     }
 }

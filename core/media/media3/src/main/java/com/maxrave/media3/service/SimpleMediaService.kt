@@ -16,6 +16,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.maxrave.common.MEDIA_NOTIFICATION
 import com.maxrave.domain.mediaservice.handler.MediaPlayerHandler
@@ -40,6 +41,9 @@ internal class SimpleMediaService :
     private val coilBitmapLoader: CoilBitmapLoader by inject<CoilBitmapLoader>()
 
     private var mediaSession: MediaLibrarySession? = null
+
+    // The controller onCreate connects to its own session; released with the service.
+    private var selfController: ListenableFuture<MediaController>? = null
 
     private val simpleMediaSessionCallback: MediaLibrarySession.Callback by inject<MediaLibrarySession.Callback>()
 
@@ -88,12 +92,18 @@ internal class SimpleMediaService :
         )
 
         if (mediaSession == null) {
+            // Session ids are process-wide in Media3. A session an earlier instance of this service
+            // left behind would make the build below throw "Session ID must be unique".
+            liveSession?.let { stale ->
+                Logger.w("Service", "Releasing a session left by an earlier service instance")
+                stale.release()
+            }
             mediaSession =
                 provideMediaLibrarySession(
                     this,
                     player,
                     simpleMediaSessionCallback,
-                )
+                ).also { liveSession = it }
         }
 
         simpleMediaServiceHandler.onUpdateNotification = { list ->
@@ -106,6 +116,7 @@ internal class SimpleMediaService :
         val sessionToken = SessionToken(this, ComponentName(this, SimpleMediaService::class.java))
         val controllerFuture = MediaController.Builder(this, sessionToken).buildAsync()
         controllerFuture.addListener({ controllerFuture.get() }, MoreExecutors.directExecutor())
+        selfController = controllerFuture
 
         simpleMediaServiceHandler.onUpdateNotification = { list ->
             val commandButtonList = list.map { it.toCommandButton(this) }
@@ -150,6 +161,7 @@ internal class SimpleMediaService :
                 // Release handler (contains coroutines and jobs, which also releases the adapter)
                 simpleMediaServiceHandler.release()
                 mediaSession = null
+                liveSession = null
                 Logger.w("Service", "Simple Media Service Released")
             } catch (e: Exception) {
                 Logger.e("Service", "Error during release")
@@ -159,11 +171,21 @@ internal class SimpleMediaService :
 
     @UnstableApi
     override fun onDestroy() {
-        super.onDestroy()
         Logger.w("Service", "Simple Media Service Destroyed")
+        selfController?.let { MediaController.releaseFuture(it) }
+        selfController = null
         if (simpleMediaServiceHandler.shouldReleaseOnTaskRemoved()) {
             release()
+        } else {
+            // Android stops an idle background service while the process lives on (paused, app in
+            // the background), and starts a new instance when the app comes back. Media3 does not
+            // release a service's sessions in onDestroy, so the session goes here; the player and
+            // its handler stay, and the next instance builds a fresh session around them.
+            mediaSession?.release()
+            mediaSession = null
+            liveSession = null
         }
+        super.onDestroy()
     }
 
     override fun onTrimMemory(level: Int) {
@@ -211,6 +233,11 @@ internal class SimpleMediaService :
                 }
             }
             .build()
+
+    private companion object {
+        // The session this process currently has registered, whichever service instance built it.
+        var liveSession: MediaLibrarySession? = null
+    }
 
     private fun isAppInForeground(): Boolean {
         val appProcessInfo = RunningAppProcessInfo()

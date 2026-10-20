@@ -224,7 +224,6 @@ import simpmusic.composeapp.generated.resources.disliking
 import simpmusic.composeapp.generated.resources.download
 import simpmusic.composeapp.generated.resources.download_disabled_live
 import simpmusic.composeapp.generated.resources.download_speed
-import simpmusic.composeapp.generated.resources.download_this_song_video_file_to_your_device
 import simpmusic.composeapp.generated.resources.downloaded
 import simpmusic.composeapp.generated.resources.downloading
 import simpmusic.composeapp.generated.resources.downloading_audio
@@ -927,21 +926,6 @@ fun InfoPlayerBottomSheet(
                     style = typo().bodyMedium,
                     textAlign = TextAlign.Center,
                 )
-                OutlinedButton(
-                    enabled = screenDataState.bitmap != null,
-                    onClick = {
-                        sharedViewModel.downloadFile(
-                            bitmap = screenDataState.bitmap ?: return@OutlinedButton,
-                        )
-                    },
-                    modifier =
-                        Modifier
-                            .wrapContentSize()
-                            .align(Alignment.CenterHorizontally)
-                            .padding(vertical = 10.dp),
-                ) {
-                    Text(text = stringResource(Res.string.download_this_song_video_file_to_your_device))
-                }
                 Spacer(modifier = Modifier.height(10.dp))
 
                 EndOfModalBottomSheet()

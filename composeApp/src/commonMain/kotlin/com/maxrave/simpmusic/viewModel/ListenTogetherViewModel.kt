@@ -2,7 +2,6 @@ package com.maxrave.simpmusic.viewModel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.maxrave.data.listentogether.ListenTogetherPlaybackBridge
 import com.maxrave.data.listentogether.ListenTogetherPrefs
 import com.maxrave.domain.data.model.listentogether.ListenTogetherRoom
 import com.maxrave.domain.repository.ListenTogetherRepository
@@ -24,15 +23,8 @@ import kotlinx.coroutines.flow.stateIn
 class ListenTogetherViewModel(
     private val repository: ListenTogetherRepository,
     private val dataStore: DataStoreManager,
-    bridge: ListenTogetherPlaybackBridge,
 ) : ViewModel() {
     init {
-        // The bridge is a singleton that outlives this screen; starting it here is simply the
-        // first moment anything asks for it. Koin's `createdAtStart` does not fire for modules
-        // added with loadKoinModules, so without an explicit injection it is never constructed
-        // at all — and then a room syncs membership while no audio follows anyone.
-        bridge.start()
-
         // Host conveniences live in settings but are applied by the session, so they are mirrored
         // onto it for as long as this screen exists.
         viewModelScope.launch {

@@ -30,7 +30,6 @@ import com.maxrave.domain.utils.isRadioPlaylistId
 import com.maxrave.simpmusic.ui.screen.home.analytics.monthFullNameResource
 import com.maxrave.simpmusic.ui.screen.library.LibraryDynamicPlaylistType
 import com.maxrave.simpmusic.viewModel.base.BaseViewModel
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -215,7 +214,7 @@ class LibraryViewModel(
                     )
                 }
                 temp.reverse()
-                _recentlyAdded.value = LocalResource.Success(temp.toImmutableList())
+                _recentlyAdded.value = LocalResource.Success(temp.toList())
             }
         }
     }

@@ -199,11 +199,15 @@ internal class StreamRepositoryImpl(
                             ", expires in ${response.streamingData?.expiresInSeconds}s",
                     )
                     val durationSecond = response.videoDetails?.lengthSeconds?.toIntOrNull()
-                    // AutoMix metadata from Tidal official API
+                    // AutoMix metadata from Tidal official API. Only the crossfade's DJ mode reads it,
+                    // and the lookup sits between the tap and the first note, so it runs only then.
                     var tidalBpm: Int? = null
                     var tidalMusicKey: String? = null
                     var tidalKeyScale: String? = null
-                    if (!isVideo && durationSecond != null && data.third == MediaType.Song) {
+                    val djModeOn =
+                        dataStoreManager.crossfadeEnabled.first() == DataStoreManager.TRUE &&
+                            dataStoreManager.crossfadeDjMode.first() == DataStoreManager.TRUE
+                    if (djModeOn && !isVideo && durationSecond != null && data.third == MediaType.Song) {
                         val title = response.videoDetails?.title ?: ""
                         val author = response.videoDetails?.author ?: ""
                         val q =

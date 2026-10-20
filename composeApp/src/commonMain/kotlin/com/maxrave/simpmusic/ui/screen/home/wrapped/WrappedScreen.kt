@@ -51,7 +51,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.kmpalette.loader.rememberNetworkLoader
 import com.kmpalette.rememberDominantColorState
-import com.kyant.backdrop.highlight.Highlight
 import com.materialkolor.PaletteStyle
 import com.materialkolor.rememberDynamicColorScheme
 import com.maxrave.simpmusic.Platform
@@ -65,6 +64,7 @@ import com.maxrave.simpmusic.expect.ui.toPngByteArray
 import com.maxrave.simpmusic.extension.LeftToRight
 import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.ui.component.CenterLoadingBox
+import com.maxrave.simpmusic.ui.component.Highlight
 import com.maxrave.simpmusic.ui.component.LiquidGlassIconButton
 import com.maxrave.simpmusic.ui.component.capture.CaptureController
 import com.maxrave.simpmusic.ui.component.capture.capturable
@@ -92,6 +92,7 @@ import com.maxrave.simpmusic.viewModel.WrappedYear
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.http.Url
+import kotlin.random.Random
 import kotlinx.coroutines.launch
 import multiplatform.network.cmptoast.ToastGravity
 import multiplatform.network.cmptoast.showToast
@@ -107,7 +108,6 @@ import simpmusic.composeapp.generated.resources.wrapped_share
 import simpmusic.composeapp.generated.resources.wrapped_tap_to_begin
 import simpmusic.composeapp.generated.resources.wrapped_tap_to_continue
 import simpmusic.composeapp.generated.resources.wrapped_year
-import kotlin.random.Random
 
 /**
  * SimpMusic Wrapped: the year told as a story reel.

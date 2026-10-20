@@ -70,7 +70,6 @@ import coil3.compose.LocalPlatformContext
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.kyant.backdrop.highlight.Highlight
 import com.maxrave.common.Config.MAIN_PLAYER
 import com.maxrave.domain.mediaservice.handler.MediaPlayerHandler
 import com.maxrave.domain.mediaservice.handler.RepeatState
@@ -85,9 +84,10 @@ import com.maxrave.simpmusic.expect.ui.toImageBitmap
 import com.maxrave.simpmusic.extension.LeftToRight
 import com.maxrave.simpmusic.extension.smoothScrimBrush
 import com.maxrave.simpmusic.getPlatform
-import com.maxrave.simpmusic.ui.component.LyricText
 import com.maxrave.simpmusic.ui.component.ExplicitBadge
+import com.maxrave.simpmusic.ui.component.Highlight
 import com.maxrave.simpmusic.ui.component.LiquidGlassIconButton
+import com.maxrave.simpmusic.ui.component.LyricText
 import com.maxrave.simpmusic.ui.component.rememberHolderPainter
 import com.maxrave.simpmusic.ui.icon.Forward5
 import com.maxrave.simpmusic.ui.icon.Fullscreen
@@ -115,9 +115,9 @@ import com.maxrave.simpmusic.ui.theme.typo
 import com.maxrave.simpmusic.viewModel.NowPlayingScreenData
 import com.maxrave.simpmusic.viewModel.SharedViewModel
 import com.maxrave.simpmusic.viewModel.UIEvent
+import kotlin.math.pow
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
-import kotlin.math.pow
 
 /**
  * The Apple Music Now Playing style: a style-internal dock (Lyrics · [Output | Listen Together] ·

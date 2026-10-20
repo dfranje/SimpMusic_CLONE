@@ -85,7 +85,6 @@ import coil3.compose.LocalPlatformContext
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.kyant.backdrop.highlight.Highlight
 import com.maxrave.common.Config
 import com.maxrave.domain.data.model.browse.album.Track
 import com.maxrave.domain.data.model.home.Content
@@ -104,14 +103,14 @@ import com.maxrave.simpmusic.extension.getColorFromPalette
 import com.maxrave.simpmusic.extension.getScreenSizeInfo
 import com.maxrave.simpmusic.extension.getStringBlocking
 import com.maxrave.simpmusic.extension.hexToColorOrNull
-import com.maxrave.simpmusic.extension.rgbFactor
 import com.maxrave.simpmusic.extension.rememberPaletteColor
+import com.maxrave.simpmusic.extension.rgbFactor
 import com.maxrave.simpmusic.extension.toSquareThumbnailUrl
 import com.maxrave.simpmusic.ui.component.AddToPlaylistModalBottomSheet
 import com.maxrave.simpmusic.ui.component.CenterLoadingBox
-import com.maxrave.simpmusic.ui.component.rememberHolderPainter
 import com.maxrave.simpmusic.ui.component.DescriptionView
 import com.maxrave.simpmusic.ui.component.EndOfPage
+import com.maxrave.simpmusic.ui.component.Highlight
 import com.maxrave.simpmusic.ui.component.HomeItemArtist
 import com.maxrave.simpmusic.ui.component.HomeItemContentPlaylist
 import com.maxrave.simpmusic.ui.component.HomeItemVideo
@@ -119,6 +118,7 @@ import com.maxrave.simpmusic.ui.component.LiquidGlassIconButton
 import com.maxrave.simpmusic.ui.component.NowPlayingBottomSheet
 import com.maxrave.simpmusic.ui.component.SongFullWidthItems
 import com.maxrave.simpmusic.ui.component.liquidGlass
+import com.maxrave.simpmusic.ui.component.rememberHolderPainter
 import com.maxrave.simpmusic.ui.component.selection.SelectedSongsBottomSheet
 import com.maxrave.simpmusic.ui.component.selection.SongSelectionState
 import com.maxrave.simpmusic.ui.component.selection.SongSelectionTopAppBar

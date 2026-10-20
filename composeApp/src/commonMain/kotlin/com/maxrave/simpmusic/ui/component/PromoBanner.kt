@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.min
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
-import com.kyant.backdrop.highlight.Highlight
 import com.maxrave.simpmusic.expect.ui.layerBackdrop
 import com.maxrave.simpmusic.expect.ui.rememberBackdrop
 import com.maxrave.simpmusic.ui.icon.Close

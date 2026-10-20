@@ -9,11 +9,9 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -29,7 +27,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.unit.Constraints
@@ -54,7 +51,6 @@ import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDestinatio
 import com.maxrave.simpmusic.ui.navigation.destination.library.MixForYouDestination
 import com.maxrave.simpmusic.ui.navigation.destination.search.SearchDestination
 import com.maxrave.simpmusic.ui.screen.MiniPlayer
-import com.maxrave.simpmusic.ui.theme.LocalIsDarkTheme
 import com.maxrave.simpmusic.viewModel.SharedViewModel
 import kotlin.reflect.KClass
 
@@ -65,6 +61,7 @@ private const val BAR_MORPH_MS = 300
 private val BarEdgePadding = 16.dp
 private val SearchGap = 12.dp
 private val SearchSize = 56.dp
+private val BarHeight = 64.dp
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -77,13 +74,10 @@ actual fun LiquidGlassAppBottomNavigationBar(
     showAnalyticsTab: Boolean,
     showMixForYouTab: Boolean,
     onOpenNowPlaying: () -> Unit,
-    liquidGlass: Boolean,
+    // Ignored: the XYZ build has no glass, so the bar is always the flat one.
+    @Suppress("UNUSED_PARAMETER") liquidGlass: Boolean,
     reloadDestinationIfNeeded: (KClass<*>) -> Unit,
 ) {
-    val layer = rememberGraphicsLayer()
-    val searchFabInteraction = rememberGlassInteraction()
-    // Only the glass reads what is behind it.
-    val luminance = rememberGlassLuminance(layer, enabled = liquidGlass)
 
     val nowPlayingData by viewModel.nowPlayingState.collectAsStateWithLifecycle()
     // MiniPlayer visibility: derived, never stored.
@@ -96,8 +90,6 @@ actual fun LiquidGlassAppBottomNavigationBar(
     // out with the mini player, dropped it, then brought it back, animating each step through
     // decoupledConstraints.
     //
-    // Fixing the copy in App.kt did nothing here, because with liquid glass on it is THIS file
-    // that draws the mini player.
     val isShowMiniPlayer by remember {
         derivedStateOf {
             val item = nowPlayingData?.mediaItem
@@ -163,11 +155,11 @@ actual fun LiquidGlassAppBottomNavigationBar(
         isExpanded = !isInSearchDestination
     }
 
-    // Flat: the bar's own 16dp side edges, so the two line up, and its 8dp gaps.
-    val miniPlayerPadding = if (liquidGlass) 12.dp else 16.dp
-    val miniPlayerGap = if (liquidGlass) 12.dp else 8.dp
+    // The bar's own 16dp side edges, so the two line up, and its 8dp gaps.
+    val miniPlayerPadding = 16.dp
+    val miniPlayerGap = 8.dp
     val constraintSet =
-        remember(isShowMiniPlayer, isExpanded, liquidGlass) {
+        remember(isShowMiniPlayer, isExpanded) {
             decoupledConstraints(isShowMiniPlayer, isExpanded, miniPlayerPadding, miniPlayerGap)
         }
 
@@ -208,13 +200,9 @@ actual fun LiquidGlassAppBottomNavigationBar(
             modifier = Modifier.fillMaxSize().clickable(enabled = !isExpanded) { isExpanded = true },
             contentAlignment = Alignment.Center,
         ) {
-            if (liquidGlass) {
+            // The bar marks its selected tab in primary, and this circle is that tab.
+            CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.primary) {
                 selectedScreen.icon()
-            } else {
-                // The flat bar marks its selected tab in primary, and this circle is that tab.
-                CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.primary) {
-                    selectedScreen.icon()
-                }
             }
         }
     }
@@ -227,20 +215,13 @@ actual fun LiquidGlassAppBottomNavigationBar(
                     WindowInsets.navigationBars.asPaddingValues(),
                 ).padding(
                     bottom = 8.dp,
-                )
-                // The flat bar never rode above the keyboard, so it still does not.
-                .then(if (liquidGlass) Modifier.imePadding() else Modifier),
+                ),
     ) {
         // The capsule's budget: the row minus its edge padding, the gap and the search FAB. The
         // capsule caps its tabs at TabWidth, so with two or three tabs it ends up narrower and the
         // toolbar centres capsule + gap + FAB as one cluster (see decoupledConstraints).
         val capsuleBudget = maxWidth - BarEdgePadding * 2 - SearchGap - SearchSize
-        val capsuleWidth =
-            if (liquidGlass) {
-                liquidGlassTabBarWidth(barTabs.size, capsuleBudget)
-            } else {
-                flatTabBarWidth(barTabs.size, capsuleBudget)
-            }
+        val capsuleWidth = flatTabBarWidth(barTabs.size, capsuleBudget)
         ConstraintLayout(
             constraintSet = constraintSet,
             modifier = Modifier.fillMaxWidth(),
@@ -258,48 +239,17 @@ actual fun LiquidGlassAppBottomNavigationBar(
                 modifier = Modifier.layoutId("toolbar"),
                 content = {
                     // Exactly two children, in this order, for the measure policy below.
-                    if (liquidGlass) {
-                        LiquidGlassTabBar(
-                            tabs = barTabs,
-                            selectedTab = barTabs.indexOfFirst { it.ordinal == selectedIndex },
-                            backdrop = backdrop,
-                            layer = layer,
-                            luminance = luminance,
-                            availableWidth = capsuleBudget,
-                            onTabSelected = { position -> selectTab(barTabs[position].ordinal) },
-                            collapsedContent = collapsedCircle,
-                        )
-                        // Search lives in its own circular glass FAB (Apple Music style).
-                        Box(
-                            modifier =
-                                Modifier
-                                    .size(SearchSize)
-                                    .drawInteractiveGlass(
-                                        LocalIsDarkTheme.current,
-                                        backdrop,
-                                        // Only the capsule records the shared sample; Search must not overwrite it.
-                                        null,
-                                        { luminance.value },
-                                        CircleShape,
-                                        searchFabInteraction,
-                                    ).clickable { selectTab(BottomNavScreen.Search.ordinal) },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            BottomNavScreen.Search.icon()
-                        }
-                    } else {
-                        FlatTabBar(
-                            tabs = barTabs,
-                            selectedIndex = selectedIndex,
-                            availableWidth = capsuleBudget,
-                            onTabSelected = { screen -> selectTab(screen.ordinal) },
-                            collapsedContent = collapsedCircle,
-                        )
-                        FlatSearchButton(
-                            selected = selectedIndex == BottomNavScreen.Search.ordinal,
-                            onClick = { selectTab(BottomNavScreen.Search.ordinal) },
-                        )
-                    }
+                    FlatTabBar(
+                        tabs = barTabs,
+                        selectedIndex = selectedIndex,
+                        availableWidth = capsuleBudget,
+                        onTabSelected = { screen -> selectTab(screen.ordinal) },
+                        collapsedContent = collapsedCircle,
+                    )
+                    FlatSearchButton(
+                        selected = selectedIndex == BottomNavScreen.Search.ordinal,
+                        onClick = { selectTab(BottomNavScreen.Search.ordinal) },
+                    )
                 },
             ) { measurables, constraints ->
                 val folded = CollapsedBarSize.roundToPx()

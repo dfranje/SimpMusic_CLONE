@@ -6,7 +6,6 @@ import com.maxrave.domain.data.model.comments.CommentLikeState
 import com.maxrave.domain.data.model.comments.YouTubeComment
 import com.maxrave.domain.data.model.comments.YouTubeCommentsHeader
 import com.maxrave.domain.data.model.comments.YouTubeCommentsPage
-import com.maxrave.domain.data.model.canvas.CanvasResult
 import com.maxrave.domain.data.model.home.Content
 import com.maxrave.domain.data.model.mediaService.SponsorSkipSegments
 import com.maxrave.domain.data.model.metadata.Line
@@ -36,13 +35,6 @@ import com.maxrave.kotlinytmusicscraper.models.youtube.Transcript
 import com.maxrave.kotlinytmusicscraper.models.youtube.YouTubeInitialPage
 import com.maxrave.kotlinytmusicscraper.pages.CommentItem
 import com.maxrave.kotlinytmusicscraper.pages.CommentsPage
-import com.maxrave.spotify.model.response.spotify.CanvasResponse
-import com.maxrave.spotify.model.response.spotify.SpotifyLyricsResponse
-import org.simpmusic.lyrics.models.response.LyricsResponse
-import org.simpmusic.lyrics.models.response.TranslatedLyricsResponse
-import org.simpmusic.lyrics.parser.parseRichSyncLyrics
-import org.simpmusic.lyrics.parser.parseSyncedLyrics
-import org.simpmusic.lyrics.parser.parseUnsyncedLyrics
 import kotlin.jvm.JvmName
 
 internal fun SongItem.toTrack(): Track =
@@ -114,69 +106,6 @@ internal fun Track.toSongItemForDownload(): SongItem =
         thumbnail = this.thumbnails?.lastOrNull()?.url ?: "",
         explicit = this.isExplicit,
     )
-
-internal fun org.simpmusic.lyrics.domain.Lyrics.toLyrics(): Lyrics {
-    val lines: ArrayList<Line> = arrayListOf()
-    if (this.lyrics != null) {
-        this.lyrics?.lines?.forEach {
-            lines.add(
-                Line(
-                    endTimeMs = it.endTimeMs,
-                    startTimeMs = it.startTimeMs,
-                    syllables = it.syllables ?: listOf(),
-                    words = it.words,
-                ),
-            )
-        }
-        return Lyrics(
-            error = false,
-            lines = lines,
-            syncType = this.lyrics!!.syncType,
-        )
-    } else {
-        return Lyrics(
-            error = true,
-            lines = null,
-            syncType = null,
-        )
-    }
-}
-
-internal fun Lyrics.toLibraryLyrics(): org.simpmusic.lyrics.domain.Lyrics =
-    org.simpmusic.lyrics.domain.Lyrics(
-        lyrics =
-            org.simpmusic.lyrics.domain.Lyrics.LyricsX(
-                lines =
-                    this.lines?.map {
-                        org.simpmusic.lyrics.domain.Lyrics.LyricsX.Line(
-                            endTimeMs = it.endTimeMs,
-                            startTimeMs = it.startTimeMs,
-                            syllables = listOf(),
-                            words = it.words,
-                        )
-                    },
-                syncType = this.syncType,
-            ),
-    )
-
-internal fun SpotifyLyricsResponse.toLyrics(): Lyrics {
-    val lines: ArrayList<Line> = arrayListOf()
-    this.lyrics.lines.forEach {
-        lines.add(
-            Line(
-                endTimeMs = it.endTimeMs,
-                startTimeMs = it.startTimeMs,
-                syllables = listOf(),
-                words = it.words,
-            ),
-        )
-    }
-    return Lyrics(
-        error = false,
-        lines = lines,
-        syncType = this.lyrics.syncType,
-    )
-}
 
 internal fun PipedResponse.toTrack(videoId: String): Track =
     Track(
@@ -289,24 +218,6 @@ internal fun AlbumItem.toAlbumsResult(): AlbumsResult =
         type = if (isSingle) "SINGLE" else "ALBUM",
         year = this.year?.toString() ?: "",
     )
-
-// SimpMusic Lyrics Extension
-internal fun LyricsResponse.toLyrics(): Lyrics? =
-    (
-        richSyncLyrics?.takeIf { it.isNotEmpty() }?.let {
-            parseRichSyncLyrics(it)
-        }
-            ?: syncedLyrics?.let { if (it.isNotEmpty() && it.isNotBlank()) parseSyncedLyrics(it) else null }
-            ?: (
-                if (plainLyric.isNotEmpty() && plainLyric.isNotBlank()) {
-                    parseUnsyncedLyrics(plainLyric)
-                } else {
-                    null
-                }
-            )
-    )?.toLyrics()
-
-internal fun TranslatedLyricsResponse.toLyrics(): Lyrics = parseSyncedLyrics(this.translatedLyric).toLyrics()
 
 internal fun SearchSuggestions.toDomainSearchSuggestions(): com.maxrave.domain.data.model.searchResult.SearchSuggestions =
     com.maxrave.domain.data.model.searchResult.SearchSuggestions(
@@ -432,29 +343,6 @@ internal fun SearchSuggestions.toDomainSearchSuggestions(): com.maxrave.domain.d
                 }
             },
     )
-
-internal fun CanvasResponse.toCanvasResult(): CanvasResult? {
-    val canvasUrl = this.canvases.firstOrNull()?.canvas_url ?: return null
-    val canvasThumbs = this.canvases.firstOrNull()?.thumbsOfCanva
-    val thumbUrl =
-        if (!canvasThumbs.isNullOrEmpty()) {
-            (
-                canvasThumbs.let { thumb ->
-                    thumb
-                        .maxByOrNull {
-                            (it.height ?: 0) + (it.width ?: 0)
-                        }?.url
-                } ?: canvasThumbs.first().url
-            )
-        } else {
-            null
-        }
-    return CanvasResult(
-        isVideo = canvasUrl.contains(".mp4"),
-        canvasUrl = canvasUrl,
-        canvasThumbUrl = thumbUrl,
-    )
-}
 
 internal fun YouTubeWatchEndpoint.toWatchEndpoint(): WatchEndpoint =
     WatchEndpoint(

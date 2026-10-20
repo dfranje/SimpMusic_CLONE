@@ -22,7 +22,6 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.compose.compiler)
-    alias(libs.plugins.aboutlibraries.multiplatform)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.build.config)
     alias(libs.plugins.osdetector)
@@ -100,12 +99,6 @@ kotlin {
                 implementation(projects.castEmpty)
             }
 
-            // Login sync QR scanner: CameraX + ZXing, not ML Kit, which F-Droid rejects as proprietary
-            implementation(libs.camera.camera2)
-            implementation(libs.camera.lifecycle)
-            implementation(libs.camera.view)
-            implementation(libs.zxing.core)
-
             // Login WebViews: startUpWebView moves Chromium startup off the main thread
             implementation(libs.androidx.webkit)
         }
@@ -162,16 +155,10 @@ kotlin {
             implementation(libs.androidx.paging.common)
             implementation(libs.paging.compose)
 
-            implementation(libs.aboutlibraries)
-            implementation(libs.aboutlibraries.compose.m3)
-
             // Koin
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
-
-            // Jetbrains Markdown
-            api(libs.markdown)
 
             // Blur Haze
             implementation(libs.haze)
@@ -179,10 +166,6 @@ kotlin {
             implementation(libs.haze.material)
 
             api(libs.cmptoast)
-
-            // Liquid glass
-            implementation(libs.liquid.glass)
-            implementation(libs.liquid.glass.shape)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -198,8 +181,6 @@ kotlin {
             implementation(libs.native.tray)
             implementation(libs.nucleus.core.runtime)
             implementation(projects.mediaJvmUi)
-            // Login sync QR code
-            implementation(libs.zxing.core)
         }
     }
 }
@@ -928,21 +909,6 @@ kotlin {
         jvmMain {
             resources.srcDir(sqliteIntelMacNative)
         }
-    }
-}
-
-aboutLibraries {
-    collect.configPath = file("../config")
-    export {
-        outputFile = file("src/commonMain/composeResources/files/aboutlibraries.json")
-        prettyPrint = true
-        excludeFields = listOf("generated")
-    }
-    library {
-        // Enable the duplication mode, allows to merge, or link dependencies which relate
-        duplicationMode = com.mikepenz.aboutlibraries.plugin.DuplicateMode.MERGE
-        // Configure the duplication rule, to match "duplicates" with
-        duplicationRule = com.mikepenz.aboutlibraries.plugin.DuplicateRule.SIMPLE
     }
 }
 

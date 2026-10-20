@@ -32,8 +32,6 @@ import com.maxrave.domain.data.model.browse.album.Track
 import com.maxrave.domain.data.model.mediaService.SponsorSkipSegments
 import com.maxrave.domain.data.model.searchResult.songs.Artist
 import com.maxrave.domain.data.model.streams.YouTubeWatchEndpoint
-import com.maxrave.domain.data.player.AudioEffects
-import com.maxrave.domain.data.player.DelayEffect
 import com.maxrave.domain.data.player.GenericCastState
 import com.maxrave.domain.data.player.GenericCommandButton
 import com.maxrave.domain.data.player.GenericMediaItem
@@ -42,8 +40,6 @@ import com.maxrave.domain.data.player.GenericPlaybackParameters
 import com.maxrave.domain.data.player.GenericTracks
 import com.maxrave.domain.data.player.PlayerConstants
 import com.maxrave.domain.data.player.PlayerError
-import com.maxrave.domain.data.player.ReverbEffect
-import com.maxrave.domain.data.player.ReverbPreset
 import com.maxrave.domain.extension.isVideo
 import com.maxrave.domain.extension.now
 import com.maxrave.domain.extension.toGenericMediaItem
@@ -77,7 +73,6 @@ import com.maxrave.domain.utils.toListName
 import com.maxrave.domain.utils.toSongEntity
 import com.maxrave.domain.utils.toTrack
 import com.maxrave.logger.Logger
-import com.my.kizzy.DiscordRPC
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -382,42 +377,6 @@ internal class MediaServiceHandlerImpl(
                         }
                     }
                 }
-        }
-        // A collector of its own rather than more legs on the equalizer's: `combine` takes at most
-        // five flows with a lambda, and these seven fold into two halves that each stand alone.
-        backgroundScope.launch {
-            val delayEffects =
-                combine(
-                    dataStoreManager.delayEnabled,
-                    dataStoreManager.delayTimeMs,
-                    dataStoreManager.delayFeedback,
-                    dataStoreManager.delayMix,
-                ) { enabled, timeMs, feedback, mix ->
-                    // Off is null rather than a zero mix: the filter has to actually come out of
-                    // the audio chain, and the stored values are left alone so switching back on
-                    // returns to the user's own settings.
-                    if (enabled == TRUE) DelayEffect(timeMs = timeMs, feedback = feedback, mix = mix) else null
-                }
-            val reverbEffects =
-                combine(
-                    dataStoreManager.reverbEnabled,
-                    dataStoreManager.reverbPreset,
-                    dataStoreManager.reverbMix,
-                ) { enabled, presetName, mix ->
-                    if (enabled == TRUE) {
-                        ReverbEffect(
-                            // A room written by a newer build is a name this one has never heard
-                            // of; falling back beats letting valueOf take the whole collector down.
-                            preset = runCatching { ReverbPreset.valueOf(presetName) }.getOrDefault(ReverbPreset.HALL),
-                            mix = mix,
-                        )
-                    } else {
-                        null
-                    }
-                }
-            combine(delayEffects, reverbEffects) { echo, room -> AudioEffects(delay = echo, reverb = room) }
-                .distinctUntilChanged()
-                .collect { effects -> player.setAudioEffects(effects) }
         }
         normalizeVolume =
             runBlocking { dataStoreManager.normalizeVolume.first() == TRUE }

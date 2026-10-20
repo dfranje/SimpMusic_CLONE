@@ -135,10 +135,8 @@ android {
             )
         resources {
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
-            // Same reasons as androidApp: kuromoji's duplicate META-INF docs, and its dictionary is
-            // downloaded on demand instead of shipped.
+            // Same reason as androidApp: duplicate META-INF docs.
             excludes += "META-INF/*.md"
-            excludes += "com/atilika/kuromoji/ipadic/*.bin"
         }
     }
 }
@@ -149,12 +147,7 @@ dependencies {
     debugImplementation(libs.ui.tooling)
     implementation(libs.activity.compose)
     implementation(libs.customactivityoncrash)
-    implementation(libs.easypermissions)
-    implementation(libs.legacy.support.v4)
     implementation(libs.coroutines.android)
-    implementation(libs.glance)
-    implementation(libs.glance.appwidget)
-    implementation(libs.glance.material3)
 
     implementation(projects.composeApp)
     implementation(projects.data)

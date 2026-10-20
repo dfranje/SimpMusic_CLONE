@@ -67,9 +67,6 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.kmpalette.rememberPaletteState
-import com.kyant.backdrop.highlight.Highlight
-import com.maxrave.simpmusic.extension.barBlurStyle
-import com.maxrave.simpmusic.ui.component.DownloadingIndicator
 import com.maxrave.domain.data.entities.DownloadState
 import com.maxrave.domain.data.model.browse.album.Track
 import com.maxrave.domain.utils.toSongEntity
@@ -77,14 +74,17 @@ import com.maxrave.simpmusic.expect.ui.layerBackdrop
 import com.maxrave.simpmusic.expect.ui.rememberBackdrop
 import com.maxrave.simpmusic.expect.ui.toImageBitmap
 import com.maxrave.simpmusic.extension.artworkScrimBrush
+import com.maxrave.simpmusic.extension.barBlurStyle
 import com.maxrave.simpmusic.extension.getColorFromPalette
 import com.maxrave.simpmusic.extension.getScreenSizeInfo
 import com.maxrave.simpmusic.extension.rememberPaletteColor
 import com.maxrave.simpmusic.ui.component.AddToPlaylistModalBottomSheet
 import com.maxrave.simpmusic.ui.component.CenterLoadingBox
 import com.maxrave.simpmusic.ui.component.DescriptionView
+import com.maxrave.simpmusic.ui.component.DownloadingIndicator
 import com.maxrave.simpmusic.ui.component.EndOfPage
 import com.maxrave.simpmusic.ui.component.HeartCheckBox
+import com.maxrave.simpmusic.ui.component.Highlight
 import com.maxrave.simpmusic.ui.component.HomeItemContentPlaylist
 import com.maxrave.simpmusic.ui.component.LiquidGlassIconButton
 import com.maxrave.simpmusic.ui.component.NowPlayingBottomSheet

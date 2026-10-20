@@ -1,11 +1,9 @@
 package com.maxrave.simpmusic
 
-import android.Manifest
 import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.res.Configuration
-import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import androidx.activity.SystemBarStyle
@@ -18,11 +16,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.net.toUri
 import androidx.core.os.LocaleListCompat
-import androidx.lifecycle.lifecycleScope
-import androidx.work.Constraints
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.eygraber.uri.toKmpUriOrNull
 import com.maxrave.common.FIRST_TIME_MIGRATION
@@ -37,21 +30,16 @@ import com.maxrave.domain.mediaservice.handler.ToastType
 import com.maxrave.logger.Logger
 import com.maxrave.media3.di.setServiceActivitySession
 import com.maxrave.simpmusic.di.viewModelModule
-import com.maxrave.simpmusic.service.rss.RssFeedNotifyWork
-import com.maxrave.simpmusic.service.test.notification.NotifyWork
 import com.maxrave.simpmusic.utils.ComposeResUtils
 import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.simpmusic.viewModel.SharedViewModel
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.koin.android.ext.android.inject
 import org.koin.core.context.loadKoinModules
 import org.koin.core.context.unloadKoinModules
 import org.koin.dsl.module
 import org.simpmusic.crashlytics.pushPlayerError
-import pub.devrel.easypermissions.EasyPermissions
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 @Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity() {
@@ -117,7 +105,6 @@ class MainActivity : AppCompatActivity() {
         unloadKoinModules(viewModelModule)
         loadKoinModules(viewModelModule)
         VersionManager.initialize()
-        checkForUpdate()
         if (viewModel.recreateActivity.value || viewModel.isServiceRunning) {
             viewModel.activityRecreateDone()
         } else {
@@ -190,71 +177,12 @@ class MainActivity : AppCompatActivity() {
                 ),
         )
         viewModel.checkIsRestoring()
-        val request =
-            PeriodicWorkRequestBuilder<NotifyWork>(
-                12L,
-                TimeUnit.HOURS,
-            ).addTag("Worker Test")
-                .setConstraints(
-                    Constraints
-                        .Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        .build(),
-                ).build()
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-            "Artist Worker",
-            ExistingPeriodicWorkPolicy.KEEP,
-            request,
-        )
-        lifecycleScope.launch {
-            dataStoreManager.blogNotificationEnabled.collect { enabled ->
-                if (enabled == DataStoreManager.TRUE) {
-                    val rssRequest =
-                        PeriodicWorkRequestBuilder<RssFeedNotifyWork>(
-                            24L,
-                            TimeUnit.HOURS,
-                        ).addTag("Blog RSS Worker")
-                            .setConstraints(
-                                Constraints
-                                    .Builder()
-                                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                                    .build(),
-                            ).build()
-                    WorkManager.getInstance(this@MainActivity).enqueueUniquePeriodicWork(
-                        "Blog RSS Worker",
-                        ExistingPeriodicWorkPolicy.KEEP,
-                        rssRequest,
-                    )
-                } else {
-                    WorkManager.getInstance(this@MainActivity).cancelUniqueWork("Blog RSS Worker")
-                }
-            }
-        }
-
-        if (!EasyPermissions.hasPermissions(this, Manifest.permission.POST_NOTIFICATIONS)) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val doNotAsk = getString("notification_permission_do_not_ask")
-                if (doNotAsk != "true") {
-                    val wasAsked = getString("notification_permission_asked")
-                    if (wasAsked != "true") {
-                        // First time: request system permission
-                        EasyPermissions.requestPermissions(
-                            this,
-                            runBlocking { ComposeResUtils.getResString(ComposeResUtils.StringType.NOTIFICATION_REQUEST) },
-                            1,
-                            Manifest.permission.POST_NOTIFICATIONS,
-                        )
-                        putString("notification_permission_asked", "true")
-                    } else {
-                        // Already asked before: show custom dialog with "Don't show again"
-                        viewModel.showNotificationPermissionDialog()
-                    }
-                }
-            }
-        }
+        // No background jobs in this build: the followed-artists release check and the blog RSS
+        // check are gone, so drop whatever an older install had scheduled.
+        WorkManager.getInstance(this).cancelUniqueWork("Artist Worker")
+        WorkManager.getInstance(this).cancelUniqueWork("Blog RSS Worker")
         viewModel.getLocation()
 
-        if (!BuildConfig.DEBUG) viewModel.checkOfficialBuild(packageName, signingCertSha256())
         setContent {
             App(viewModel)
         }
@@ -305,12 +233,6 @@ class MainActivity : AppCompatActivity() {
         viewModel.isServiceRunning = true
         shouldUnbind = true
         Logger.d("Service", "Service started")
-    }
-
-    private fun checkForUpdate() {
-        if (viewModel.shouldCheckForUpdate()) {
-            viewModel.checkForUpdate()
-        }
     }
 
     private fun putString(

@@ -14,7 +14,6 @@ import com.maxrave.domain.repository.CommonRepository
 import com.maxrave.kotlinytmusicscraper.YouTube
 import com.maxrave.kotlinytmusicscraper.models.YouTubeLocale
 import com.maxrave.logger.Logger
-import com.maxrave.spotify.Spotify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -22,6 +21,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -31,8 +31,6 @@ import okio.IOException
 import okio.Path.Companion.toPath
 import okio.buffer
 import okio.use
-import org.simpmusic.aiservice.AIHost
-import org.simpmusic.aiservice.AiClient
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -41,8 +39,6 @@ internal class CommonRepositoryImpl(
     private val database: MusicDatabase,
     private val localDataSource: LocalDataSource,
     private val youTube: YouTube,
-    private val spotify: Spotify,
-    private val aiClient: AiClient,
 ) : CommonRepository {
     @OptIn(ExperimentalTime::class)
     override fun init(
@@ -142,16 +138,10 @@ internal class CommonRepositoryImpl(
                                     data.host,
                                     data.port,
                                 )
-                                spotify.setProxy(
-                                    data.type == DataStoreManager.ProxyType.PROXY_TYPE_HTTP,
-                                    data.host,
-                                    data.port,
-                                )
                             }
                         } else {
                             clearProxyAuthenticator()
                             youTube.removeProxy()
-                            spotify.removeProxy()
                         }
                     }
                 }
@@ -187,6 +177,12 @@ internal class CommonRepositoryImpl(
             // above then propagates the new values into YouTube reactively.
             val tidalRemoteConfigJob =
                 launch {
+                    // Only the crossfade's DJ mode uses what this file carries (TIDAL credentials) in
+                    // this build; Home's promo banners are not shown here. No launch-time fetch otherwise.
+                    val djModeOn =
+                        dataStoreManager.crossfadeEnabled.first() == DataStoreManager.TRUE &&
+                            dataStoreManager.crossfadeDjMode.first() == DataStoreManager.TRUE
+                    if (!djModeOn) return@launch
                     youTube
                         .getTidalRemoteConfig(dev = isDevBuild)
                         .onSuccess { config ->
@@ -212,74 +208,6 @@ internal class CommonRepositoryImpl(
                             Logger.e("RemoteConfig", "TIDAL remote config fetch failed: ${it.message}")
                         }
                 }
-            val aiClientProviderJob =
-                launch {
-                    dataStoreManager.aiProvider.collectLatest { provider ->
-                        aiClient.host =
-                            when (provider) {
-                                DataStoreManager.AI_PROVIDER_GEMINI -> AIHost.GEMINI
-                                DataStoreManager.AI_PROVIDER_OPENAI -> AIHost.OPENAI
-                                DataStoreManager.AI_PROVIDER_CUSTOM_OPENAI -> AIHost.CUSTOM_OPENAI
-                                else -> AIHost.GEMINI // Default to Gemini if not set
-                            }
-                    }
-                }
-            val aiClientApiKeyJob =
-                launch {
-                    dataStoreManager.aiApiKey.collectLatest { apiKey ->
-                        aiClient.apiKey =
-                            apiKey.ifEmpty {
-                                null
-                            }
-                    }
-                }
-            val aiCustomModelIdJob =
-                launch {
-                    dataStoreManager.customModelId.collectLatest { modelId ->
-                        aiClient.customModelId =
-                            modelId.ifEmpty {
-                                null
-                            }
-                    }
-                }
-            val aiCustomBaseUrlJob =
-                launch {
-                    dataStoreManager.customOpenAIBaseUrl.collectLatest { baseUrl ->
-                        aiClient.customBaseUrl =
-                            baseUrl.ifEmpty {
-                                null
-                            }
-                    }
-                }
-            val aiCustomHeadersJob =
-                launch {
-                    dataStoreManager.customOpenAIHeaders.collectLatest { headers ->
-                        aiClient.customHeaders =
-                            if (headers.isNotEmpty()) {
-                                try {
-                                    // Parse JSON format: {"key1":"value1","key2":"value2"}
-                                    headers
-                                        .trim()
-                                        .removeSurrounding("{", "}")
-                                        .split(",")
-                                        .mapNotNull { pair ->
-                                            val parts = pair.split(":")
-                                            if (parts.size == 2) {
-                                                parts[0].trim().removeSurrounding("\"") to
-                                                    parts[1].trim().removeSurrounding("\"")
-                                            } else {
-                                                null
-                                            }
-                                        }.toMap()
-                                } catch (e: Exception) {
-                                    Logger.e("CommonRepository", "Failed to parse custom headers: ${e.message}")
-                                    null
-                                }
-                            } else {
-                                null
-                            }
-                    }
-                }
 
             localeJob.join()
             ytCookieJob.join()
@@ -289,11 +217,6 @@ internal class CommonRepositoryImpl(
             dataSyncIdJob.join()
             visitorDataJob.join()
             resetSpotifyToken.join()
-            aiClientProviderJob.join()
-            aiClientApiKeyJob.join()
-            aiCustomModelIdJob.join()
-            aiCustomBaseUrlJob.join()
-            aiCustomHeadersJob.join()
         }
     }
 

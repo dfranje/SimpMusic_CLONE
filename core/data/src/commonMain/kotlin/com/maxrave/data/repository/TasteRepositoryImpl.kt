@@ -1,17 +1,16 @@
 package com.maxrave.data.repository
 
+import com.maxrave.domain.data.model.taste.TasteException
 import com.maxrave.domain.data.model.taste.TasteInput
 import com.maxrave.domain.data.model.taste.TasteProfile
-import com.maxrave.domain.extension.now
 import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.domain.repository.TasteRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
-import org.simpmusic.aiservice.AiClient
 
+/** The XYZ build ships no AI client, so a stored reading is still shown but no new one can be made. */
 internal class TasteRepositoryImpl(
-    private val aiClient: AiClient,
     private val dataStoreManager: DataStoreManager,
 ) : TasteRepository {
     private val json = Json { ignoreUnknownKeys = true }
@@ -26,13 +25,5 @@ internal class TasteRepositoryImpl(
     override suspend fun describeTaste(
         input: TasteInput,
         artistImages: List<String>,
-    ): Result<TasteProfile> =
-        aiClient.describeTaste(input).map { reading ->
-            TasteProfile(
-                headline = reading.headline,
-                summary = reading.summary,
-                artistImages = artistImages,
-                generatedAt = now(),
-            ).also { dataStoreManager.setTasteProfile(json.encodeToString(it)) }
-        }
+    ): Result<TasteProfile> = Result.failure(TasteException(TasteException.Kind.NOT_CONFIGURED))
 }

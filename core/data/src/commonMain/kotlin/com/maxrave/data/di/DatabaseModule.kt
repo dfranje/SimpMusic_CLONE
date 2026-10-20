@@ -13,12 +13,9 @@ import com.maxrave.data.db.datasource.LocalDataSource
 import com.maxrave.data.db.getDatabaseBuilder
 import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.kotlinytmusicscraper.YouTube
-import com.maxrave.spotify.Spotify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import org.koin.dsl.module
-import org.simpmusic.aiservice.AiClient
-import org.simpmusic.lyrics.SimpMusicLyricsClient
 import kotlin.time.ExperimentalTime
 import org.simpmusic.autoeq.AutoEq
 
@@ -61,18 +58,6 @@ val databaseModule =
         // Move YouTube from Singleton to Koin DI
         single(createdAtStart = true) {
             YouTube()
-        }
-
-        single(createdAtStart = true) {
-            Spotify()
-        }
-
-        single(createdAtStart = true) {
-            AiClient()
-        }
-
-        single(createdAtStart = true) {
-            SimpMusicLyricsClient()
         }
 
         // Not created at start, unlike the rest: nothing needs it until someone opens the AutoEq

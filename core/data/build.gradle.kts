@@ -71,13 +71,8 @@ kotlin {
             dependencies {
                 implementation(projects.common)
                 implementation(projects.domain)
-                implementation(projects.aiService)
                 implementation(projects.autoEqService)
-                implementation(projects.lyricsService)
-                implementation(projects.spotify)
                 implementation(projects.kotlinYtmusicScraper)
-                implementation(projects.kizzy)
-                implementation(projects.listenTogether)
 
                 // Last.fm (gated: real scrobbler for full builds, no-op stub for FOSS builds)
                 if (isFullBuild) {
@@ -118,8 +113,6 @@ kotlin {
                 implementation(libs.koin.android)
                 implementation(projects.media3)
                 implementation(libs.room.ktx)
-                // Login sync: the phone sends sign-ins to the Desktop
-                implementation(projects.loginSync)
             }
         }
 
@@ -139,8 +132,6 @@ kotlin {
                 implementation(libs.nowplaying)
                 implementation(libs.jna)
                 implementation(libs.jna.platform)
-                // Login sync: the Desktop receives sign-ins from the phone
-                implementation(projects.loginSync)
             }
         }
     }

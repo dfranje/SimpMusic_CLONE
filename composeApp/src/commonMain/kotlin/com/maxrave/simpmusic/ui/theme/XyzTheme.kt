@@ -51,6 +51,9 @@ const val XYZ_ACCENT_FOLLOW = "follow"
 /** Written once this install has been moved onto [THEME_COLOR_XYZ] (SharedViewModel), so it never happens twice. */
 const val XYZ_THEME_ADOPTED_KEY = "xyz_theme_adopted"
 
+/** Set once the light build's defaults (see SharedViewModel.applyXyzLightDefaultsOnce) were applied. */
+const val XYZ_LIGHT_DEFAULTS_KEY = "xyz_light_defaults_v1"
+
 /** One launcher palette: [accent] is the main colour, [deep] its darker end, [accent2] the second colour. */
 @Immutable
 class XyzAccent(

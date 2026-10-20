@@ -3,7 +3,6 @@ package com.maxrave.simpmusic.viewModel
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.viewModelScope
 import com.maxrave.common.AppIdentity
-import com.maxrave.common.Config
 import com.maxrave.common.Config.ALBUM_CLICK
 import com.maxrave.common.Config.DOWNLOAD_CACHE
 import com.maxrave.common.Config.PLAYLIST_CLICK
@@ -12,6 +11,7 @@ import com.maxrave.common.Config.SHARE
 import com.maxrave.common.Config.SONG_CLICK
 import com.maxrave.common.Config.VIDEO_CLICK
 import com.maxrave.common.LibraryChipType
+import com.maxrave.common.QUALITY
 import com.maxrave.common.SELECTED_LANGUAGE
 import com.maxrave.common.STATUS_DONE
 import com.maxrave.domain.data.entities.AlbumEntity
@@ -30,7 +30,6 @@ import com.maxrave.domain.data.model.intent.GenericIntent
 import com.maxrave.domain.data.model.metadata.Lyrics
 import com.maxrave.domain.data.model.promo.Promo
 import com.maxrave.domain.data.model.streams.TimeLine
-import com.maxrave.domain.data.model.update.UpdateData
 import com.maxrave.domain.data.player.GenericCastState
 import com.maxrave.domain.data.player.LiveStreamRegistry
 import com.maxrave.domain.extension.decodeHtmlEntities
@@ -58,7 +57,6 @@ import com.maxrave.domain.repository.LyricsCanvasRepository
 import com.maxrave.domain.repository.PlaylistRepository
 import com.maxrave.domain.repository.SongRepository
 import com.maxrave.domain.repository.StreamRepository
-import com.maxrave.domain.repository.UpdateRepository
 import com.maxrave.domain.utils.Resource
 import com.maxrave.domain.utils.YouTubeLikeStatus
 import com.maxrave.domain.utils.isEndlessQueueId
@@ -77,6 +75,7 @@ import com.maxrave.simpmusic.expect.ui.toByteArray
 import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.ui.theme.THEME_COLOR_XYZ
 import com.maxrave.simpmusic.ui.theme.XYZ_ACCENT_KEY
+import com.maxrave.simpmusic.ui.theme.XYZ_LIGHT_DEFAULTS_KEY
 import com.maxrave.simpmusic.ui.theme.XYZ_THEME_ADOPTED_KEY
 import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.simpmusic.utils.decodePromos
@@ -139,7 +138,6 @@ const val FOOTGUNS_STAR_KEY = "footguns_starred"
 class SharedViewModel(
     private val dataStoreManager: DataStoreManager,
     private val streamRepository: StreamRepository,
-    private val updateRepository: UpdateRepository,
     private val songRepository: SongRepository,
     private val albumRepository: AlbumRepository,
     private val localPlaylistRepository: LocalPlaylistRepository,
@@ -150,10 +148,10 @@ class SharedViewModel(
     var isFirstLiked: Boolean = false
     var isFirstMiniplayer: Boolean = false
     var isFirstSuggestions: Boolean = false
-    var showedUpdateDialog: Boolean = false
 
     private val appIdentity: AppIdentity by inject()
 
+    // Never raised in the XYZ build, which checks for no updates; Home's banner and Settings still read it.
     private val _isCheckingUpdate = MutableStateFlow(false)
     val isCheckingUpdate: StateFlow<Boolean> = _isCheckingUpdate
 
@@ -190,9 +188,6 @@ class SharedViewModel(
 
     private val _showNotificationPermissionDialog = MutableStateFlow(false)
     val showNotificationPermissionDialog: StateFlow<Boolean> = _showNotificationPermissionDialog
-
-    private val _isOfficialBuild = MutableStateFlow(true)
-    val isOfficialBuild: StateFlow<Boolean> = _isOfficialBuild
 
     // One-shot: the Desktop capsule asks the Now Playing panel, which hosts the page, to open
     // full-screen lyrics. The panel consumes it once shown.
@@ -299,6 +294,7 @@ class SharedViewModel(
             }
             dataStoreManager.openApp()
             launch { adoptXyzThemeOnce() }
+            launch { applyXyzLightDefaultsOnce() }
             val timeLineJob =
                 launch {
                     nowPlayingState
@@ -440,7 +436,8 @@ class SharedViewModel(
                     state.mediaItem.let { now ->
                         _canvas.value = null
                         getLikeStatus(now.mediaId)
-                        getSongInfo(now.mediaId)
+                        // No song-info lookup here (description, views, likes and dislikes: two more
+                        // requests per song); nothing in the XYZ shell shows it.
                         getFormat(now.mediaId)
                         _nowPlayingScreenData.update {
                             it.copy(
@@ -1191,79 +1188,6 @@ class SharedViewModel(
             }
     }
 
-    private var _updateResponse = MutableStateFlow<UpdateData?>(null)
-    val updateResponse: StateFlow<UpdateData?> = _updateResponse
-
-    fun checkForUpdate() {
-        // Raised before the coroutine starts, so Home's launch banner, which reads it right after
-        // startup, can never miss a check that is already under way but not yet marked.
-        _isCheckingUpdate.value = true
-        viewModelScope.launch {
-            val updateChannel = dataStoreManager.updateChannel.first()
-            dataStoreManager.putString(
-                "CheckForUpdateAt",
-                System.currentTimeMillis().toString(),
-            )
-            if (updateChannel == DataStoreManager.GITHUB) {
-                updateRepository.checkForGithubReleaseUpdate().collectLatest { response ->
-                    val data = response.data
-                    when (response) {
-                        is Resource.Success if (data != null) -> {
-                            _updateResponse.value = data
-                            showedUpdateDialog = true
-                        }
-
-                        else -> {
-                            log("Check for update error: ${response.message}", LogLevel.WARN)
-                        }
-                    }
-                    _isCheckingUpdate.value = false
-                }
-            } else if (updateChannel == DataStoreManager.FDROID) {
-                updateRepository.checkForFdroidUpdate().collectLatest { response ->
-                    val data = response.data
-                    when (response) {
-                        is Resource.Success if (data != null) -> {
-                            _updateResponse.value = data
-                            showedUpdateDialog = true
-                        }
-
-                        else -> {
-                            log("Check for update error: ${response.message}", LogLevel.WARN)
-                        }
-                    }
-                    _isCheckingUpdate.value = false
-                }
-            }
-        }.invokeOnCompletion {
-            // Also for a channel neither branch handles, and for a check that throws: the launch
-            // banner waits for this flag, so it must never stay raised.
-            _isCheckingUpdate.value = false
-        }
-    }
-
-    /**
-     * [signingCerts]: SHA-256 hex of each certificate this APK is signed with. A failed fetch leaves
-     * the app usable — it plays offline, and an unknown answer must not lock out our own users.
-     */
-    fun checkOfficialBuild(
-        packageName: String,
-        signingCerts: List<String>,
-    ) {
-        if (packageName !in Config.OFFICIAL_PACKAGE_NAMES) {
-            _isOfficialBuild.value = false
-            return
-        }
-        viewModelScope.launch {
-            updateRepository.getFdroidSigningKeys().collect { response ->
-                val keys = response.data
-                // No certificate read at all is an unknown answer, and unknown never blocks.
-                if (response is Resource.Success && keys != null && signingCerts.isNotEmpty() && keys.none { it in signingCerts }) {
-                    _isOfficialBuild.value = false
-                }
-            }
-        }
-    }
 
     fun stopPlayer() {
         _nowPlayingScreenData.value = NowPlayingScreenData.initial()
@@ -2089,6 +2013,26 @@ class SharedViewModel(
         dataStoreManager.putString(XYZ_THEME_ADOPTED_KEY, TRUE)
     }
 
+    /**
+     * The defaults of this light build, applied once to an install that predates them; a fresh install
+     * already starts on them. Video, delay, reverb, liquid glass and the update check have no row in
+     * Settings any more, so they are switched off for good here.
+     */
+    private suspend fun applyXyzLightDefaultsOnce() {
+        if (dataStoreManager.getString(XYZ_LIGHT_DEFAULTS_KEY).first() != null) return
+        dataStoreManager.setNormalizeVolume(true)
+        dataStoreManager.setSkipSilent(true)
+        dataStoreManager.setQuality(QUALITY.items[0].toString())
+        dataStoreManager.setMaxSongCacheSize(500)
+        dataStoreManager.setWatchVideoInsteadOfPlayingAudio(false)
+        dataStoreManager.setDelayEnabled(false)
+        dataStoreManager.setReverbEnabled(false)
+        dataStoreManager.setEnableLiquidGlass(false)
+        dataStoreManager.setAutoCheckForUpdates(false)
+        dataStoreManager.setBlogNotificationEnabled(false)
+        dataStoreManager.putString(XYZ_LIGHT_DEFAULTS_KEY, TRUE)
+    }
+
     fun setNowPlayingStyle(style: String) {
         viewModelScope.launch {
             dataStoreManager.setNowPlayingStyle(style)
@@ -2122,8 +2066,6 @@ class SharedViewModel(
     fun reloadDestinationDone() {
         _reloadDestination.value = null
     }
-
-    fun shouldCheckForUpdate(): Boolean = runBlocking { dataStoreManager.autoCheckForUpdates.first() == TRUE }
 
     private var _downloadFileProgress = MutableStateFlow<DownloadProgress>(DownloadProgress.INIT)
     val downloadFileProgress: StateFlow<DownloadProgress> get() = _downloadFileProgress

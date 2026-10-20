@@ -1,7 +1,5 @@
 package com.maxrave.kotlinytmusicscraper.extractor
 
-import com.arthenica.ffmpegkit.FFmpegKit
-import com.arthenica.ffmpegkit.ReturnCode
 import com.maxrave.kotlinytmusicscraper.models.SongItem
 import com.maxrave.kotlinytmusicscraper.models.response.DownloadProgress
 import com.maxrave.logger.Logger
@@ -9,9 +7,6 @@ import dev.maxrave.pipepipe.extractor.NewPipe
 import dev.maxrave.pipepipe.extractor.ServiceList
 import dev.maxrave.pipepipe.extractor.services.youtube.YoutubeApiDecoder
 import dev.maxrave.pipepipe.extractor.stream.StreamInfo
-import okio.FileSystem
-import okio.IOException
-import okio.Path.Companion.toPath
 import org.schabi.newpipe.extractor.NewPipe as BraveNewPipe
 import org.schabi.newpipe.extractor.ServiceList as BraveServiceList
 import org.schabi.newpipe.extractor.stream.StreamInfo as BraveStreamInfo
@@ -19,6 +14,7 @@ import org.schabi.newpipe.extractor.stream.StreamInfo as BraveStreamInfo
 private const val TAG = "Extractor"
 private const val LOCAL_TIER = "local"
 private const val REMOTE_TIER = "pipepipe.dev"
+private const val NO_FFMPEG = "Saving to the device is not available in this build"
 
 actual class Extractor {
     private var newPipeDownloader = NewPipeDownloaderImpl(proxy = null)
@@ -155,181 +151,12 @@ actual class Extractor {
             Logger.w(TAG, "BravePipe extractor failed for $videoId: ${it.message}")
         }.getOrElse { emptyList() }
 
-    actual fun mergeAudioVideoDownload(filePath: String): DownloadProgress {
-        val command =
-            listOf(
-                "-i",
-                ("$filePath.mp4"),
-                "-i",
-                ("$filePath.webm"),
-                "-c:v",
-                "copy",
-                "-c:a",
-                "aac",
-                "-map",
-                "0:v:0",
-                "-map",
-                "1:a:0",
-                "-shortest",
-                "$filePath-SimpMusic.mp4",
-            ).joinToString(" ")
-
-        if (FileSystem.SYSTEM.exists("$filePath-SimpMusic.mp4".toPath())) {
-            FileSystem.SYSTEM.delete("$filePath-SimpMusic.mp4".toPath())
-        }
-
-        val session =
-            FFmpegKit.execute(
-                command,
-            )
-        if (ReturnCode.isSuccess(session.returnCode)) {
-            // SUCCESS
-            Logger.d(TAG, "Command succeeded ${session.state}, ${session.returnCode}")
-            try {
-                FileSystem.SYSTEM.delete("$filePath.jpg".toPath())
-                FileSystem.SYSTEM.delete("$filePath.webm".toPath())
-                FileSystem.SYSTEM.delete("$filePath.mp4".toPath())
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-            return (DownloadProgress.VIDEO_DONE)
-        } else if (ReturnCode.isCancel(session.returnCode)) {
-            // CANCEL
-            Logger.d(TAG, "Command cancelled ${session.state}, ${session.returnCode}")
-            try {
-                FileSystem.SYSTEM.delete("$filePath.jpg".toPath())
-                FileSystem.SYSTEM.delete("$filePath.webm".toPath())
-                FileSystem.SYSTEM.delete("$filePath.mp4".toPath())
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-            return (DownloadProgress.failed(session.failStackTrace ?: "Command cancelled"))
-        } else {
-            // FAILURE
-            Logger.d(TAG, "Command failed ${session.state}, ${session.returnCode}, ${session.failStackTrace}")
-            try {
-                FileSystem.SYSTEM.delete("$filePath.jpg".toPath())
-                FileSystem.SYSTEM.delete("$filePath.webm".toPath())
-                FileSystem.SYSTEM.delete("$filePath.mp4".toPath())
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-            return (DownloadProgress.failed(session.failStackTrace ?: "FFmpeg command failed"))
-        }
-    }
+    // The XYZ build ships no FFmpeg (~24 MB of natives per ABI): saving a song or video to the
+    // device as a file is not offered, so these only answer if something still calls them.
+    actual fun mergeAudioVideoDownload(filePath: String): DownloadProgress = DownloadProgress.failed(NO_FFMPEG)
 
     actual fun saveAudioWithThumbnail(
         filePath: String,
         track: SongItem,
-    ): DownloadProgress {
-        val command =
-            listOf(
-                "-i",
-                ("$filePath.webm"),
-                "-q:a 0",
-                "$filePath.mp3",
-            ).joinToString(" ")
-
-        try {
-            if (FileSystem.SYSTEM.exists("$filePath.mp3".toPath())) {
-                FileSystem.SYSTEM.delete("$filePath.mp3".toPath())
-            }
-            if (FileSystem.SYSTEM.exists("$filePath-simpmusic.mp3".toPath())) {
-                FileSystem.SYSTEM.delete("$filePath-simpmusic.mp3".toPath())
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-
-        val session =
-            FFmpegKit.execute(
-                command,
-            )
-        if (ReturnCode.isSuccess(session.returnCode)) {
-            // SUCCESS
-            Logger.d(TAG, "Command succeeded ${session.state}, ${session.returnCode}")
-            try {
-                FileSystem.SYSTEM.delete("$filePath.webm".toPath())
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-        } else if (ReturnCode.isCancel(session.returnCode)) {
-            // CANCEL
-            Logger.d(TAG, "Command cancelled ${session.state}, ${session.returnCode}")
-            try {
-                FileSystem.SYSTEM.delete("$filePath.jpg".toPath())
-                FileSystem.SYSTEM.delete("$filePath.webm".toPath())
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-            return (DownloadProgress.failed("Error"))
-        } else {
-            // FAILURE
-            Logger.d(TAG, "Command failed ${session.state}, ${session.returnCode}, ${session.failStackTrace}")
-            try {
-                FileSystem.SYSTEM.delete("$filePath.jpg".toPath())
-                FileSystem.SYSTEM.delete("$filePath.webm".toPath())
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-            return (DownloadProgress.failed("Error"))
-        }
-
-        val commandInject =
-            listOf(
-                "-i",
-                "$filePath.mp3",
-                "-i $filePath.jpg",
-                "-map 0:a",
-                "-map 1:v",
-                "-c copy",
-                "-id3v2_version 3",
-                "-metadata",
-                "title=\"${track.title}\"",
-                "-metadata",
-                "artist=\"${track.artists.joinToString(", ") { it.name }}\"",
-                "-metadata",
-                "album=\"${track.album?.name ?: track.title}\"",
-                "-disposition:v:0 attached_pic",
-                "$filePath-simpmusic.mp3",
-            ).joinToString(" ")
-        val sessionInject =
-            FFmpegKit.execute(
-                commandInject,
-            )
-        if (ReturnCode.isSuccess(sessionInject.returnCode)) {
-            // SUCCESS
-            Logger.d(TAG, "Command succeeded ${sessionInject.state}, ${sessionInject.returnCode}")
-            try {
-                FileSystem.SYSTEM.delete("$filePath.mp3".toPath())
-                FileSystem.SYSTEM.delete("$filePath.jpg".toPath())
-                FileSystem.SYSTEM.delete("$filePath.webm".toPath())
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-            return (DownloadProgress.AUDIO_DONE)
-        } else if (ReturnCode.isCancel(sessionInject.returnCode)) {
-            // CANCEL
-            Logger.d(TAG, "Command cancelled ${sessionInject.state}, ${sessionInject.returnCode}")
-            try {
-                FileSystem.SYSTEM.delete("$filePath.jpg".toPath())
-                FileSystem.SYSTEM.delete("$filePath.webm".toPath())
-                FileSystem.SYSTEM.delete("$filePath-simpmusic.mp3".toPath())
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-            return (DownloadProgress.failed("Error"))
-        } else {
-            // FAILURE
-            Logger.d(TAG, "Command failed ${sessionInject.state}, ${sessionInject.returnCode}, ${sessionInject.failStackTrace}")
-            try {
-                FileSystem.SYSTEM.delete("$filePath.jpg".toPath())
-                FileSystem.SYSTEM.delete("$filePath.webm".toPath())
-                FileSystem.SYSTEM.delete("$filePath-simpmusic.mp3".toPath())
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-            return (DownloadProgress.failed("Error"))
-        }
-    }
+    ): DownloadProgress = DownloadProgress.failed(NO_FFMPEG)
 }

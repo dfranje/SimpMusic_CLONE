@@ -94,7 +94,6 @@ kotlin {
                 // commonMain by default and will correctly pull the Android artifacts of any KMP
                 // dependencies declared in commonMain.
                 implementation(libs.koin.android)
-                implementation(libs.ffmpeg.kit.audio)
                 implementation(libs.gson)
 
                 implementation(libs.pipepipe.extractor)

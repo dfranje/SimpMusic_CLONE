@@ -75,7 +75,7 @@
 - **vivoAndroidApp/** builds the same app under `com.spotify.music` for vivo's Origin Island. It has no code of its own: its source set points at androidApp's sources, resources and manifest. Its `build.gradle.kts` mirrors androidApp's, so keep the two in step.
 
 #### 3. **core/**
-Contains core modules organized by functionality:
+Contains core modules organized by functionality. In this fork `core/` is plain files in the repo, vendored from `maxrave-dev/core@2b57079` on 2026-10-20 — it is no longer a submodule, so edit it here and commit it with everything else.
 
 ##### **core/common/**
 - Shared utilities
@@ -105,14 +105,9 @@ Contains core modules organized by functionality:
 Service modules:
 
 - **kotlinYtmusicScraper/**: YouTube Music API scraper
-- **spotify/**: Spotify Web API integration (Canvas, Lyrics)
-- **aiService/**: AI features (OpenAI, Gemini integration)
 - **autoEqService/**: AutoEq headphone correction profiles (index + fixed-band curves)
-- **lyricsService/**: Lyrics fetching (LRCLIB, SimpMusic Lyrics, BetterLyrics)
-- **listenTogether/**: shared listening rooms, wire-compatible with Metrolist (`MetrolistGroup/metroproto`)
-- **loginSync/**: the QR-paired transport that moves sign-ins from the Android app to the Desktop app (Ktor client on the phone, one-shot Ktor CIO server on the Desktop, AES-256-GCM). Android + JVM targets only; carries opaque bytes — the data layer decides what they mean
-- **kizzy/**: Discord Rich Presence
 - **ktorExt/**: Ktor extensions for networking
+- **Removed in this fork (2026-10-20)**: `spotify/`, `aiService/`, `lyricsService/`, `listenTogether/`, `loginSync/` and `kizzy/`. Their domain interfaces stay and `core/data` answers them with no-op implementations; see "Light build" in the changelog.
 
 #### 4. **crashlytics/** & **crashlytics-empty/**
 - **crashlytics/**: Full version with Sentry crash reporting
@@ -152,8 +147,6 @@ Service modules:
 - **Kotlin Serialization**: JSON parsing
 - **YouTube Music hidden API**: Data source
 - **quickjs-kt** (`io.github.dokar3:quickjs-kt`): runs YouTube's player JS on-device to solve signature/`n` challenges
-- **Spotify Web API**: Canvas and lyrics
-- **OpenAI/Gemini API**: AI features
 
 ### Data & Storage
 - **Room Database**: Local persistence
@@ -163,8 +156,6 @@ Service modules:
 ### Third-party Integrations
 - **SponsorBlock**: Skip sponsors
 - **ReturnYouTubeDislike**: Vote information
-- **LRCLIB**: Lyrics provider
-- **BetterLyrics**: Additional lyrics provider (added in v1.0.4)
 - **Sentry**: Crash reporting (Full version only)
 
 ## 📝 Development Guidelines
@@ -411,7 +402,7 @@ filled states render identically.
 #### Android
 - Min SDK: Check `androidApp/build.gradle.kts`
 - Target SDK: Latest stable
-- Android Auto support
+- Android Auto media browsing (MediaLibraryService); the templated Car App Library app was removed in this fork
 - Background playback with MediaSession
 
 #### Desktop
@@ -1092,7 +1083,16 @@ if (getPlatform() == Platform.Android) {
   - **The app's own keyboard (`XyzKeyboard`)**: the search pills on Artists and Songs are NOT text fields, so the system IME never opens there (head units often have none that works). Tapping the pill opens `XyzKeyboard` at the bottom of the page, with the layout XYZ Radio uses (radio-core `KeyboardView.buildText`): digits, QWERTZ with Š Đ Č Ć Ž, Shift, Delete (hold to clear), a wide Space and Enter. Enter searches at once and closes it; Back closes it first. A new field elsewhere in the shell should use `XyzSearchPage`/`XyzKeyboard` rather than a `TextField`.
   - **Picking anything to play opens Home**: `BaseViewModel.loadMediaItem` and `SharedViewModel.loadMediaItemFromTrack` (every list, page and shared-link start, and nothing automatic) raise `UserPlaybackStarts`, which `App.kt` turns into `navigateXyzPage(HomeDestination)` in the XYZ shell.
   - **The old search is gone when a page is opened again**: `SearchText` is plain `remember` state, never saveable, so leaving Artists or Songs (picking a song does) drops the query and the results.
-  - **Not in the XYZ look**: Spotify (the whole group), Discord, AI (provider, keys, lyrics translation) and Login Sync to the desktop are hidden in Settings (`isXyzLook`). Their code stays, and nothing of theirs runs without a sign-in that can no longer be started.
+  - **Not in the XYZ look**: Spotify (the whole group), Discord and AI (provider, keys, lyrics translation) are hidden in Settings (`isXyzLook`). Since the light build below, their code is gone too.
+
+- **Light build (2026-10-20, this fork only)**: the app is meant to be small and quick on a car head unit, so everything the XYZ build does not use was taken out, code and libraries both.
+  - **Modules removed**: `kizzy` (Discord), `spotify` (canvas, Spotify lyrics), `aiService`, `lyricsService` (LRCLIB/SimpMusic/BetterLyrics, romanization with kuromoji + pinyin4j), `listenTogether` (protobuf + websockets) and `loginSync` (Ktor server). Their domain interfaces stay and `core/data` answers them itself: `DiscordRPC` is a stub in `mediaservice/`, `LyricsCanvasRepositoryImpl` keeps the local cache, saved translations and YouTube captions and answers everything else with `Resource.Error`, `TasteRepositoryImpl` answers "not configured", `LyricsRomanizerRepositoryImpl` and `ListenTogetherRepositoryImpl` are no-ops (the playback bridge is deleted). Login Sync is deleted outright, domain interfaces, view models and Settings row included.
+  - **Libraries removed**: FFmpeg-kit (≈24 MB of natives per ABI, used only to save a song or video to the device as a file: `Extractor.android.kt` now answers `DownloadProgress.failed`, and the info sheet's button is gone), CameraX + ZXing (Login Sync's scanner), Glance (the three home-screen widgets), the Car App Library and `androidx.media` (the templated Android Auto app; Android Auto's plain media browsing through `MediaLibraryService` stays), Media3 RTSP, SmoothStreaming and WorkManager extensions, Kyant's backdrop (liquid glass), the markdown renderer and AboutLibraries (the Credits screen is deleted; the Version row only shows the version), easypermissions and legacy-support-v4. Unused catalog entries were pruned with them.
+  - **Liquid glass is a flat surface now**: `liquidGlass()`, `LiquidGlassContainer` and `LiquidGlassIconButton` keep their names and parameters but draw `surfaceContainerHighest @ 80%` with a faint rim; `PlatformBackdrop` is an empty token and `layerBackdrop()` draws nothing; `Highlight` is a local class in `ui/component`. The Android bottom bar is always the flat one, and `LiquidGlassTabBar` is deleted.
+  - **Delay and reverb are gone on Android** (processors, kernels and their tests deleted, the handler's collector removed). Desktop's mpv graph still has them.
+  - **Background work removed**: the artist-release and blog-RSS workers are cancelled at startup (`MainActivity`), the launch update check and its dialog are gone (`autoCheckForUpdates` defaults to off), the unofficial-build check no longer runs, the per-track song-info/dislikes fetch is gone, and the TIDAL BPM/key lookup (stream resolution and remote config) only runs with crossfade DJ mode on. The file log writes errors only (`error.log`); `app.log` is never written.
+  - **New defaults**, applied once to existing installs by `SharedViewModel.applyXyzLightDefaultsOnce()` (`xyz_light_defaults_v1`): streaming quality Low, Normalize volume and Skip silence on, player cache 500 MB, video for video tracks off, delay/reverb/liquid glass/update check/blog notification off. A user can still change the ones that kept a Settings row.
+  - **Settings rows removed**: liquid glass, video quality and video download quality, play video for video tracks, delay, reverb, update channel and check, blog notification, third-party libraries. Hidden in the XYZ look only: proxy, backup and the upstream About links.
 
 ## 🔄 CLAUDE.md Auto-Update Rule (MANDATORY)
 
@@ -1118,6 +1118,6 @@ After completing any of the following types of changes, the AI agent **MUST** up
 
 *This document helps AI Agents quickly understand the SimpMusic project. Update regularly when there are major changes to architecture or structure.*
 
-**Last updated**: 2026-10-19
+**Last updated**: 2026-10-20
 **Project version**: Check latest release on GitHub
 **Maintained by**: maxrave-dev and contributors

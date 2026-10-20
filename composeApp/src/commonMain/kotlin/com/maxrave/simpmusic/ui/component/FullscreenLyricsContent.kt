@@ -81,7 +81,6 @@ import coil3.compose.LocalPlatformContext
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.kyant.backdrop.highlight.Highlight
 import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.simpmusic.Platform
 import com.maxrave.simpmusic.expect.toggleMiniPlayer

@@ -135,18 +135,9 @@ android {
             )
         resources {
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
-            // kuromoji ships the SAME META-INF/CONTRIBUTORS.md and META-INF/LICENSE.md in both
-            // kuromoji-ipadic and the kuromoji-core it depends on, and mergeDebugJavaResource
-            // refuses to pick between two files at one path. Excluded by pattern rather than by
-            // name: dropping only CONTRIBUTORS.md moves the failure to LICENSE.md on the next
-            // build. Nothing here is code — these are documentation files.
+            // Documentation files two jars can ship at the same path; mergeDebugJavaResource
+            // refuses to pick between them. Nothing here is code.
             excludes += "META-INF/*.md"
-            // kuromoji's ipadic dictionary is ~13 MB of .bin resources — the whole reason the APK
-            // grew by 14.4 MB. Android fetches the same eight files on demand instead (see
-            // KuromojiDictionary in lyricsService androidMain), so the classpath copies are
-            // dropped here. Desktop is untouched: its jars keep the resources and kuromoji's
-            // default classpath resolver keeps working there.
-            excludes += "com/atilika/kuromoji/ipadic/*.bin"
         }
     }
     compileOptions {
@@ -164,18 +155,9 @@ dependencies {
     // Custom Activity On Crash
     implementation(libs.customactivityoncrash)
 
-    // Easy Permissions
-    implementation(libs.easypermissions)
 
-    // Legacy Support
-    implementation(libs.legacy.support.v4)
     // Coroutines
     implementation(libs.coroutines.android)
-
-    // Glance
-    implementation(libs.glance)
-    implementation(libs.glance.appwidget)
-    implementation(libs.glance.material3)
 
     implementation(projects.composeApp)
     implementation(projects.data)

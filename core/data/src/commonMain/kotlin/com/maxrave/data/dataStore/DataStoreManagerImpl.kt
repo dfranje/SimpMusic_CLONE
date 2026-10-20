@@ -250,7 +250,7 @@ internal class DataStoreManagerImpl(
 
     override val normalizeVolume: Flow<String> =
         settingsDataStore.data.map { preferences ->
-            preferences[NORMALIZE_VOLUME] ?: FALSE
+            preferences[NORMALIZE_VOLUME] ?: TRUE
         }
 
     override suspend fun setNormalizeVolume(normalize: Boolean) {
@@ -269,7 +269,7 @@ internal class DataStoreManagerImpl(
 
     override val skipSilent: Flow<String> =
         settingsDataStore.data.map { preferences ->
-            preferences[SKIP_SILENT] ?: FALSE
+            preferences[SKIP_SILENT] ?: TRUE
         }
 
     override suspend fun setSkipSilent(skip: Boolean) {
@@ -514,7 +514,7 @@ internal class DataStoreManagerImpl(
 
     override val maxSongCacheSize =
         settingsDataStore.data.map { preferences ->
-            preferences[MAX_SONG_CACHE_SIZE] ?: -1
+            preferences[MAX_SONG_CACHE_SIZE] ?: 500
         }
 
     override suspend fun setMaxSongCacheSize(size: Int) {
@@ -1226,7 +1226,7 @@ internal class DataStoreManagerImpl(
 
     override val autoCheckForUpdates =
         settingsDataStore.data.map { preferences ->
-            preferences[AUTO_CHECK_FOR_UPDATES] ?: TRUE
+            preferences[AUTO_CHECK_FOR_UPDATES] ?: FALSE
         }
 
     override suspend fun setAutoCheckForUpdates(autoCheck: Boolean) {
@@ -1758,7 +1758,7 @@ internal class DataStoreManagerImpl(
 
     override val blogNotificationEnabled: Flow<String> =
         settingsDataStore.data.map { preferences ->
-            preferences[BLOG_NOTIFICATION_ENABLED] ?: TRUE
+            preferences[BLOG_NOTIFICATION_ENABLED] ?: FALSE
         }
 
     override suspend fun setBlogNotificationEnabled(enabled: Boolean) {

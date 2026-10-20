@@ -57,7 +57,7 @@ val repositoryModule =
         }
 
         single<CommonRepository>(createdAtStart = true) {
-            CommonRepositoryImpl(get(named(SERVICE_SCOPE)), get(), get(), get(), get(), get()).apply {
+            CommonRepositoryImpl(get(named(SERVICE_SCOPE)), get(), get(), get()).apply {
                 this.init("${fileDir()}/ytdlp-cookie.txt", get(), get<AppIdentity>().isDevBuild)
             }
         }
@@ -67,14 +67,9 @@ val repositoryModule =
             AutoEqRepositoryImpl(get(), get())
         }
 
-        // Lazy: constructing it costs a few File.length() calls (plus, while the pack is missing,
-        // one background read of the stored selection), but the kuromoji dictionary behind it is
-        // loaded on first Japanese line, or right after a download installs it, and never at
-        // startup — so this must NOT be createdAtStart, or every launch pays for a feature most
-        // listeners leave off. The path is where Android keeps the downloaded ipadic pack (the
-        // APK no longer bundles it); Desktop and iOS ignore it.
+        // A no-op in the XYZ build, which has no lyrics to romanize.
         single<LyricsRomanizerRepository> {
-            LyricsRomanizerRepositoryImpl("${fileDir()}/kuromoji-ipadic", get())
+            LyricsRomanizerRepositoryImpl()
         }
 
         single<HomeRepository>(createdAtStart = true) {
@@ -90,7 +85,7 @@ val repositoryModule =
         }
 
         single<LyricsCanvasRepository>(createdAtStart = true) {
-            LyricsCanvasRepositoryImpl(get(), get(), get(), get(), get())
+            LyricsCanvasRepositoryImpl(get(), get())
         }
 
         single<PlaylistRepository>(createdAtStart = true) {
@@ -123,6 +118,6 @@ val repositoryModule =
 
         // Lazy: only the taste card in Library asks for it.
         single<TasteRepository> {
-            TasteRepositoryImpl(get(), get())
+            TasteRepositoryImpl(get())
         }
     }

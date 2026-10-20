@@ -31,11 +31,11 @@ object Logger {
         private set
 
     /**
-     * Mirrors the log onto disk under [directory]: Info and above into [APP_LOG], Error alone into
-     * [ERROR_LOG]. Debug stays on Logcat/console only. Called once at startup by each app.
+     * Mirrors errors onto disk under [directory], into [ERROR_LOG]; everything else stays on
+     * Logcat/console only. Called once at startup by each app.
      *
      * Kermit's RollingFileLogWriter writes on a thread of its own, so a caller never waits on the
-     * disk, and rolls each file over by size, so the folder never grows past about 4 MB.
+     * disk, and rolls each file over by size, so the folder never grows past about 1 MB.
      */
     fun enableFileLogging(directory: String) {
         if (logDirectory != null) return
@@ -43,8 +43,9 @@ object Logger {
         // The writer opens its file but never creates the folder, and a missing one only drops lines.
         runCatching { SystemFileSystem.createDirectories(path) }
         logDirectory = directory
+        // Errors only in the XYZ build: an Info/Warn line for every track change and network call was
+        // a steady stream of disk writes on a head unit. app.log is simply never written.
         logger.addLogWriter(
-            LevelFileWriter(path, APP_LOG, rollOnSize = 1_000_000, maxLogFiles = APP_LOG_FILES, minSeverity = Severity.Info),
             LevelFileWriter(path, ERROR_LOG, rollOnSize = 512_000, maxLogFiles = ERROR_LOG_FILES, minSeverity = Severity.Error),
         )
     }

@@ -73,7 +73,6 @@ import com.maxrave.domain.utils.toListName
 import com.maxrave.domain.utils.toSongEntity
 import com.maxrave.domain.utils.toTrack
 import com.maxrave.logger.Logger
-import com.my.kizzy.DiscordRPC
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

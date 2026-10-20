@@ -56,10 +56,8 @@ import com.maxrave.domain.utils.toSongEntity
 import com.maxrave.domain.utils.toTrack
 import com.maxrave.logger.LogLevel
 import com.maxrave.logger.Logger
-import com.maxrave.simpmusic.Platform
-import com.maxrave.simpmusic.expect.isOnUnmeteredNetwork
-import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.ui.theme.XYZ_ACCENT_KEY
+import com.maxrave.simpmusic.ui.theme.XYZ_DEFAULTS_V2_KEY
 import com.maxrave.simpmusic.ui.theme.XYZ_LIGHT_DEFAULTS_KEY
 import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.simpmusic.viewModel.base.BaseViewModel
@@ -101,8 +99,6 @@ import simpmusic.composeapp.generated.resources.play_next
 import simpmusic.composeapp.generated.resources.removed_from_youtube_liked
 import simpmusic.composeapp.generated.resources.shared
 import simpmusic.composeapp.generated.resources.updated
-import kotlin.time.Clock
-import kotlin.time.Duration.Companion.days
 
 // DataStore key for the kotlin-footguns star prompt. Cleared on every version bump,
 // so the ask comes back after an update - same policy as OPEN_APP_TIME.
@@ -217,7 +213,10 @@ class SharedViewModel(
                 )
             }
             dataStoreManager.openApp()
-            launch { applyXyzLightDefaultsOnce() }
+            launch {
+                applyXyzLightDefaultsOnce()
+                applyXyzDefaultsV2Once()
+            }
             launch {
                 dataStoreManager.watchVideoInsteadOfPlayingAudio.collectLatest {
                     _getVideo.value = it == TRUE
@@ -831,34 +830,6 @@ class SharedViewModel(
         }
     }
 
-    private var smartDownloadsJob: Job? = null
-
-    /**
-     * Smart downloads, asked for by MainActivity.onStart: every time the app comes onto the screen,
-     * the only moment Android lets it start the download service. Not from init: the Glance widgets
-     * create this ViewModel with the app in the background. Opening the app many times a day stays
-     * cheap: three settings are read, the pass itself runs at most once a day (the run is stamped
-     * before it starts), and never twice at once.
-     */
-    fun runSmartDownloadsIfDue() {
-        if (getPlatform() != Platform.Android) return
-        if (smartDownloadsJob?.isActive == true) return
-        smartDownloadsJob =
-            viewModelScope.launch {
-                if (dataStoreManager.smartDownloadsEnabled.first() != TRUE) return@launch
-                if (dataStoreManager.localTrackingEnabled.first() != TRUE) return@launch
-                val nowMillis = Clock.System.now().toEpochMilliseconds()
-                val sinceLastRun = nowMillis - dataStoreManager.smartDownloadsLastRun.first()
-                // A last run stamped in the future (the clock was moved back) does not block the pass.
-                if (sinceLastRun in 0 until 1.days.inWholeMilliseconds) return@launch
-                if (!isOnUnmeteredNetwork()) return@launch
-                // Stamped first: a pass that fails is not retried at every launch, and a call arriving
-                // while this one runs finds the day already done.
-                dataStoreManager.setSmartDownloadsLastRun(nowMillis)
-                songRepository.runSmartDownloads(dataStoreManager.smartDownloadsCount.first())
-            }
-    }
-
     private fun getFormat(mediaId: String?) {
         if (mediaId != _format.value?.videoId && !mediaId.isNullOrEmpty()) {
             _format.value = null
@@ -1030,6 +1001,26 @@ class SharedViewModel(
         dataStoreManager.setAutoCheckForUpdates(false)
         dataStoreManager.setBlogNotificationEnabled(false)
         dataStoreManager.putString(XYZ_LIGHT_DEFAULTS_KEY, TRUE)
+    }
+
+    /**
+     * The second round, applied once in the same way: crossfade with DJ-style transitions at 8 s, audio
+     * versions in radio and local tracking switched on; downloading liked songs, sending listening
+     * data to Google, syncing follows to YouTube and keeping YouTube playlists offline switched off.
+     * The last four have no row in Settings any more, so they stay off.
+     */
+    private suspend fun applyXyzDefaultsV2Once() {
+        if (dataStoreManager.getString(XYZ_DEFAULTS_V2_KEY).first() != null) return
+        dataStoreManager.setCrossfadeEnabled(true)
+        dataStoreManager.setCrossfadeDuration(8000)
+        dataStoreManager.setCrossfadeDjMode(true)
+        dataStoreManager.setRadioAudioOnly(true)
+        dataStoreManager.setLocalTrackingEnabled(true)
+        dataStoreManager.setAutoDownloadLikedSongs(false)
+        dataStoreManager.setSendBackToGoogle(false)
+        dataStoreManager.setSyncFollowToYouTube(false)
+        dataStoreManager.setKeepYouTubePlaylistOffline(false)
+        dataStoreManager.putString(XYZ_DEFAULTS_V2_KEY, TRUE)
     }
 
     fun setNowPlayingStyle(style: String) {

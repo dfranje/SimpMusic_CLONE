@@ -9,10 +9,8 @@ import com.maxrave.data.mapping.toYouTubeCommentsPage
 import com.maxrave.data.mapping.toSongItemForDownload
 import com.maxrave.data.mapping.toWatchEndpoint
 import com.maxrave.domain.data.entities.QueueEntity
-import com.maxrave.domain.data.entities.DownloadState
 import com.maxrave.domain.data.entities.SongEntity
 import com.maxrave.domain.data.entities.SongInfoEntity
-import com.maxrave.domain.data.entities.analytics.query.SongPlaySample
 import com.maxrave.domain.data.model.browse.album.Track
 import com.maxrave.domain.data.model.comments.YouTubeComment
 import com.maxrave.domain.data.model.comments.YouTubeCommentsPage
@@ -21,13 +19,11 @@ import com.maxrave.domain.data.model.streams.YouTubeWatchEndpoint
 import com.maxrave.domain.extension.now
 import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.domain.manager.DataStoreManager.Values.TRUE
-import com.maxrave.domain.mediaservice.handler.DownloadHandler
 import com.maxrave.domain.mediaservice.handler.MediaPlayerHandler
 import com.maxrave.domain.repository.SongRepository
 import com.maxrave.domain.utils.MusicVideoType
 import com.maxrave.domain.utils.Resource
 import com.maxrave.domain.utils.YouTubeLikeStatus
-import com.maxrave.domain.utils.isLive
 import com.maxrave.domain.utils.isRadioQueueId
 import com.maxrave.kotlinytmusicscraper.YouTube
 import com.maxrave.kotlinytmusicscraper.models.SongItem
@@ -36,7 +32,6 @@ import com.maxrave.kotlinytmusicscraper.models.response.LikeStatus
 import com.maxrave.kotlinytmusicscraper.pages.NextPage
 import com.maxrave.kotlinytmusicscraper.parser.getPlaylistContinuation
 import com.maxrave.logger.Logger
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
@@ -45,15 +40,9 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.lastOrNull
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.minus
-import kotlinx.datetime.toInstant
 import org.koin.mp.KoinPlatform.getKoin
-import kotlin.math.pow
 
 private const val TAG = "SongRepositoryImpl"
 private const val COMMENTS_TAG = "Comments"
@@ -121,98 +110,6 @@ internal class SongRepositoryImpl(
                 },
             )
         }.flowOn(Dispatchers.IO)
-
-    override suspend fun downloadAllLikedSongs(): Int =
-        withContext(Dispatchers.IO) {
-            val pending =
-                getFullDataFromDB { limit, offset ->
-                    localDataSource.getLikedSongs(limit, offset)
-                }.filter { it.downloadState != DownloadState.STATE_DOWNLOADED }
-            Logger.d(TAG, "Auto-download: queueing ${pending.size} liked songs")
-            pending.forEach { song ->
-                downloadHandler.downloadTrack(song.videoId, song.title, song.thumbnails.orEmpty())
-            }
-            pending.size
-        }
-
-    override suspend fun runSmartDownloads(count: Int): Int =
-        withContext(Dispatchers.IO) {
-            val mark = SongEntity.SMART_DOWNLOAD
-            var queued = 0
-            try {
-                // Marks on songs that are no longer downloaded, or that the user now keeps (liked while
-                // liked songs are auto-downloaded), come off first, so neither counts toward the limit
-                // nor gets removed below. Album and playlist download states are not asked: opening an
-                // album whose tracks are all downloaded marks it downloaded, which would claim songs
-                // the user never claimed.
-                localDataSource.clearCategoryFromNotDownloaded(mark)
-                if (dataStoreManager.autoDownloadLikedSongs.first() == TRUE) localDataSource.clearCategoryFromLiked(mark)
-
-                val nowTime = now()
-                val since = LocalDateTime(nowTime.date.minus(SMART_DOWNLOADS_WINDOW_DAYS, DateTimeUnit.DAY), nowTime.time)
-                val top = mutableListOf<SongEntity>()
-                for (videoId in rankBySmartDownloadScore(localDataSource.getSongPlaysSince(since), nowTime)) {
-                    if (top.size >= count) break
-                    val song = localDataSource.getSong(videoId) ?: continue
-                    // Only what YouTube confirms is a song: videos, podcasts, live streams and rows of
-                    // unknown type stay out.
-                    if (!MusicVideoType.isAudio(song.videoType) || song.isLive) continue
-                    // Downloaded or downloading without the mark: the user downloaded it themselves.
-                    if (song.downloadState != DownloadState.STATE_NOT_DOWNLOADED && song.category != mark) continue
-                    top += song
-                }
-
-                top.filter { it.downloadState == DownloadState.STATE_NOT_DOWNLOADED }.forEach { song ->
-                    // No row updated means the song was deleted meanwhile, and its file would belong to no row.
-                    if (localDataSource.updateSongCategory(song.videoId, mark) > 0) {
-                        downloadHandler.downloadTrack(song.videoId, song.title, song.thumbnails.orEmpty())
-                        queued++
-                    }
-                }
-
-                // FIFO: the oldest marked download goes first, but never one still in today's top.
-                val keep = top.mapTo(HashSet()) { it.videoId }
-                val marked = localDataSource.getSongsByCategory(mark)
-                var removed = 0
-                for (song in marked) {
-                    if (marked.size - removed <= count) break
-                    if (song.videoId in keep) continue
-                    // File first, mark second: if the process dies in between, the next pass finds the
-                    // mark on a song that is no longer downloaded and clears it.
-                    downloadHandler.removeDownload(song.videoId)
-                    localDataSource.updateSongCategory(song.videoId, null)
-                    removed++
-                }
-                Logger.i(TAG, "Smart downloads: ${top.size} kept, $queued queued, $removed removed")
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // A service start refused because the app went to the background, or a database error,
-                // ends the pass here instead of crashing the app; the rest waits for the next pass.
-                Logger.e(TAG, "Smart downloads stopped after $queued queued", e)
-            }
-            queued
-        }
-
-    override suspend fun clearSmartDownloads() {
-        withContext(Dispatchers.IO) {
-            val mark = SongEntity.SMART_DOWNLOAD
-            try {
-                // Songs the user now keeps only lose the mark; every other marked song is removed.
-                if (dataStoreManager.autoDownloadLikedSongs.first() == TRUE) localDataSource.clearCategoryFromLiked(mark)
-                val marked = localDataSource.getSongsByCategory(mark)
-                marked.forEach { song ->
-                    downloadHandler.removeDownload(song.videoId)
-                    localDataSource.updateSongCategory(song.videoId, null)
-                }
-                Logger.i(TAG, "Smart downloads off: ${marked.size} removed")
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Logger.e(TAG, "Smart downloads clear stopped", e)
-            }
-        }
-    }
 
     /**
      * The order below is the whole feature.
@@ -317,37 +214,17 @@ internal class SongRepositoryImpl(
         }
 
     /**
-     * Resolved lazily rather than taken in the constructor: the download handler is implemented in
-     * the platform media modules, and pulling it in at construction time would make this repository
-     * depend on them being built first.
-     */
-    private val downloadHandler: DownloadHandler by lazy { getKoin().get() }
-
-    /**
-     * Lazy for the same reason as [downloadHandler], and here it also breaks a cycle: the handler
-     * already depends on this repository (it calls [recoverQueue] whenever it saves the queue).
+     * Resolved lazily rather than taken in the constructor: the handler is implemented in the platform
+     * media modules, and it already depends on this repository (it calls [recoverQueue] whenever it
+     * saves the queue), so taking it in the constructor would be a cycle.
      */
     private val mediaPlayerHandler: MediaPlayerHandler by lazy { getKoin().get() }
 
-    /**
-     * Note the side effect: liking a song can start a download, when the user has asked for that.
-     *
-     * Deliberately one-way. It fires only on the way *in* (`likeStatus == 1`) and only for songs
-     * not already offline, so re-liking something you already have does not queue it twice, and
-     * unliking never removes a file — the user downloaded it, only they should undo that.
-     */
     override suspend fun updateLikeStatus(
         videoId: String,
         likeStatus: Int,
     ) = withContext(Dispatchers.Main) {
         localDataSource.updateLiked(likeStatus, videoId)
-        if (likeStatus == 1 && dataStoreManager.autoDownloadLikedSongs.first() == TRUE) {
-            val song = localDataSource.getSong(videoId)
-            if (song != null && song.downloadState != DownloadState.STATE_DOWNLOADED) {
-                Logger.d(TAG, "Auto-downloading liked song: $videoId")
-                downloadHandler.downloadTrack(videoId, song.title, song.thumbnails.orEmpty())
-            }
-        }
 //        if (dataStoreManager.combineLocalAndYouTubeLiked.first() == TRUE) {
 //            if (likeStatus == 1) {
 //                addToYouTubeLiked(videoId).collect { result ->
@@ -763,37 +640,4 @@ internal class SongRepositoryImpl(
                     }
             }
         }
-}
-
-private const val SMART_DOWNLOADS_WINDOW_DAYS = 30
-private const val SMART_DOWNLOADS_HALF_LIFE_DAYS = 14.0
-private const val MILLIS_PER_DAY = 86_400_000.0
-
-/**
- * The songs in [plays], best Smart downloads score first. Each play adds how much of the song was
- * heard (0..1; a song with no stored length counts as heard in full) times how recent it is, halving
- * every 14 days: a song played through this week outranks one played more often a month ago, and a
- * play skipped at a quarter counts a quarter. Ties go to the song played most recently.
- *
- * Both sides are encoded the way `Converters` stores timestamps (the local wall clock read as UTC),
- * so their difference is the real age whatever the device's time zone.
- */
-private fun rankBySmartDownloadScore(
-    plays: List<SongPlaySample>,
-    now: LocalDateTime,
-): List<String> {
-    val nowMillis = now.toInstant(TimeZone.UTC).toEpochMilliseconds()
-    val scores = HashMap<String, Double>()
-    val lastPlayed = HashMap<String, Long>()
-    for (play in plays) {
-        val playedMillis = play.timestamp.toInstant(TimeZone.UTC).toEpochMilliseconds()
-        val heard =
-            if (play.durationSecond > 0) (play.listenedSecond.toDouble() / play.durationSecond).coerceIn(0.0, 1.0) else 1.0
-        val ageDays = ((nowMillis - playedMillis) / MILLIS_PER_DAY).coerceAtLeast(0.0)
-        scores[play.videoId] = (scores[play.videoId] ?: 0.0) + heard * 0.5.pow(ageDays / SMART_DOWNLOADS_HALF_LIFE_DAYS)
-        lastPlayed[play.videoId] = maxOf(lastPlayed[play.videoId] ?: playedMillis, playedMillis)
-    }
-    return scores.keys.sortedWith(
-        compareByDescending<String> { scores.getValue(it) }.thenByDescending { lastPlayed.getValue(it) },
-    )
 }

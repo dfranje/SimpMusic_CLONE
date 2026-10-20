@@ -160,19 +160,6 @@ internal class LocalDataSource(
 
     suspend fun getSong(videoId: String) = databaseDao.getSong(videoId)
 
-    suspend fun getSongPlaysSince(from: LocalDateTime) = databaseDao.getSongPlaysSince(from)
-
-    suspend fun getSongsByCategory(category: String) = databaseDao.getSongsByCategory(category)
-
-    suspend fun updateSongCategory(
-        videoId: String,
-        category: String?,
-    ) = databaseDao.updateSongCategory(category, videoId)
-
-    suspend fun clearCategoryFromNotDownloaded(category: String) = databaseDao.clearCategoryFromNotDownloaded(category)
-
-    suspend fun clearCategoryFromLiked(category: String) = databaseDao.clearCategoryFromLiked(category)
-
     fun getSongAsFlow(videoId: String) = databaseDao.getSongAsFlow(videoId)
 
     /**

@@ -162,8 +162,6 @@ import simpmusic.composeapp.generated.resources.app_log_description
 import simpmusic.composeapp.generated.resources.app_name
 import simpmusic.composeapp.generated.resources.developer_option
 import simpmusic.composeapp.generated.resources.audio
-import simpmusic.composeapp.generated.resources.auto_download_liked_songs
-import simpmusic.composeapp.generated.resources.auto_download_liked_songs_description
 import simpmusic.composeapp.generated.resources.backup
 import simpmusic.composeapp.generated.resources.balance_media_loudness
 import simpmusic.composeapp.generated.resources.cancel
@@ -208,8 +206,6 @@ import simpmusic.composeapp.generated.resources.import_result
 import simpmusic.composeapp.generated.resources.import_result_skipped
 import simpmusic.composeapp.generated.resources.intro_login_to_lastfm
 import simpmusic.composeapp.generated.resources.invalid_language_code
-import simpmusic.composeapp.generated.resources.keep_your_youtube_playlist_offline
-import simpmusic.composeapp.generated.resources.keep_your_youtube_playlist_offline_description
 import simpmusic.composeapp.generated.resources.kill_service_on_exit
 import simpmusic.composeapp.generated.resources.kill_service_on_exit_description
 import simpmusic.composeapp.generated.resources.language
@@ -244,23 +240,15 @@ import simpmusic.composeapp.generated.resources.save
 import simpmusic.composeapp.generated.resources.save_playback_state
 import simpmusic.composeapp.generated.resources.save_shuffle_and_repeat_mode
 import simpmusic.composeapp.generated.resources.scrobbling_info
-import simpmusic.composeapp.generated.resources.send_back_listening_data_to_google
 import simpmusic.composeapp.generated.resources.settings
 import simpmusic.composeapp.generated.resources.signed_in
 import simpmusic.composeapp.generated.resources.skip_no_music_part
 import simpmusic.composeapp.generated.resources.skip_silent
 import simpmusic.composeapp.generated.resources.skip_sponsor_part_of_video
-import simpmusic.composeapp.generated.resources.smart_downloads
-import simpmusic.composeapp.generated.resources.smart_downloads_description
-import simpmusic.composeapp.generated.resources.smart_downloads_needs_local_tracking
-import simpmusic.composeapp.generated.resources.smart_downloads_size
-import simpmusic.composeapp.generated.resources.smart_downloads_size_value
 import simpmusic.composeapp.generated.resources.sponsorBlock
 import simpmusic.composeapp.generated.resources.sponsor_block_intro
 import simpmusic.composeapp.generated.resources.spotify_canvas_cache
 import simpmusic.composeapp.generated.resources.storage
-import simpmusic.composeapp.generated.resources.sync_follow_to_youtube
-import simpmusic.composeapp.generated.resources.sync_follow_to_youtube_description
 import simpmusic.composeapp.generated.resources.theme
 import simpmusic.composeapp.generated.resources.theme_follows_xyz_launcher
 import simpmusic.composeapp.generated.resources.xyz_accent
@@ -270,7 +258,6 @@ import simpmusic.composeapp.generated.resources.theme_mode_dark
 import simpmusic.composeapp.generated.resources.theme_mode_light
 import simpmusic.composeapp.generated.resources.theme_mode_system
 import simpmusic.composeapp.generated.resources.thumbnail_cache
-import simpmusic.composeapp.generated.resources.upload_your_listening_history_to_youtube_music_server_it_will_make_yt_music_recommendation_system_better_working_only_if_logged_in
 import simpmusic.composeapp.generated.resources.use_your_system_equalizer
 import simpmusic.composeapp.generated.resources.user_interface
 import simpmusic.composeapp.generated.resources.version
@@ -341,14 +328,9 @@ fun SettingScreen(
     val location by viewModel.location.collectAsStateWithLifecycle()
     val quality by viewModel.quality.collectAsStateWithLifecycle()
     val downloadQuality by viewModel.downloadQuality.collectAsStateWithLifecycle()
-    val autoDownloadLikedSongs by viewModel.autoDownloadLikedSongs.collectAsStateWithLifecycle()
-    val smartDownloadsEnabled by viewModel.smartDownloadsEnabled.collectAsStateWithLifecycle()
-    val smartDownloadsCount by viewModel.smartDownloadsCount.collectAsStateWithLifecycle()
-    val keepYoutubePlaylistOffline by viewModel.keepYouTubePlaylistOffline.collectAsStateWithLifecycle()
     val localTrackingEnabled by viewModel.localTrackingEnabled.collectAsStateWithLifecycle(initialValue = false)
     val combineLocalAndYouTubeLiked by viewModel.combineLocalAndYouTubeLiked.collectAsStateWithLifecycle()
     val radioAudioOnly by remember { viewModel.radioAudioOnly.map { it == TRUE } }.collectAsStateWithLifecycle(initialValue = false)
-    val sendData by remember { viewModel.sendBackToGoogle.map { it == TRUE } }.collectAsStateWithLifecycle(initialValue = false)
     val normalizeVolume by remember { viewModel.normalizeVolume.map { it == TRUE } }.collectAsStateWithLifecycle(initialValue = false)
     val skipSilent by remember { viewModel.skipSilent.map { it == TRUE } }.collectAsStateWithLifecycle(initialValue = false)
     val savePlaybackState by remember { viewModel.savedPlaybackState.map { it == TRUE } }.collectAsStateWithLifecycle(initialValue = false)
@@ -370,8 +352,6 @@ fun SettingScreen(
     val xyzPalette = LocalXyzPalette.current
     val followsLauncherDayNight =
         xyzAccent == XYZ_ACCENT_FOLLOW && xyzPalette?.fromLauncher == true
-    val loggedIn by viewModel.loggedIn.collectAsStateWithLifecycle()
-    val syncFollowToYouTube by viewModel.syncFollowToYouTube.collectAsStateWithLifecycle()
     val equalizerEnabled by viewModel.equalizerEnabled.collectAsStateWithLifecycle()
     val equalizerType by viewModel.equalizerType.collectAsStateWithLifecycle()
     val lastfmLoggedIn by viewModel.lastfmLoggedIn.collectAsStateWithLifecycle()
@@ -682,92 +662,15 @@ fun SettingScreen(
                     },
                 )
                 SettingItem(
-                    title = stringResource(Res.string.auto_download_liked_songs),
-                    subtitle = stringResource(Res.string.auto_download_liked_songs_description),
-                    smallSubtitle = true,
-                    switch = (autoDownloadLikedSongs to { viewModel.setAutoDownloadLikedSongs(it) }),
-                )
-                // Smart downloads are Android only.
-                if (getPlatform() == Platform.Android) {
-                    SettingItem(
-                        title = stringResource(Res.string.smart_downloads),
-                        subtitle =
-                            stringResource(
-                                if (localTrackingEnabled) {
-                                    Res.string.smart_downloads_description
-                                } else {
-                                    Res.string.smart_downloads_needs_local_tracking
-                                },
-                            ),
-                        smallSubtitle = true,
-                        switch = (smartDownloadsEnabled to { viewModel.setSmartDownloadsEnabled(it) }),
-                        // Songs are picked from local tracking, so it gates switching on. Switching off
-                        // stays possible without it, or the downloaded songs could not be cleared.
-                        isEnable = localTrackingEnabled || smartDownloadsEnabled,
-                    )
-                    if (smartDownloadsEnabled) {
-                        SettingItem(
-                            title = stringResource(Res.string.smart_downloads_size),
-                            subtitle = stringResource(Res.string.smart_downloads_size_value, smartDownloadsCount),
-                            smallSubtitle = true,
-                            onClick = {
-                                viewModel.setAlertData(
-                                    SettingAlertState(
-                                        title = runBlocking { getString(Res.string.smart_downloads_size) },
-                                        selectOne =
-                                            SettingAlertState.SelectData(
-                                                listSelect =
-                                                    listOf(25, 50, 100).map { count ->
-                                                        (count == smartDownloadsCount) to count.toString()
-                                                    },
-                                            ),
-                                        confirm =
-                                            runBlocking { getString(Res.string.change) } to { state ->
-                                                state.selectOne?.getSelected()?.toIntOrNull()?.let { viewModel.setSmartDownloadsCount(it) }
-                                            },
-                                        dismiss = runBlocking { getString(Res.string.cancel) },
-                                    ),
-                                )
-                            },
-                        )
-                    }
-                }
-                SettingItem(
                     title = stringResource(Res.string.radio_audio_only),
                     subtitle = stringResource(Res.string.radio_audio_only_description),
                     smallSubtitle = true,
                     switch = (radioAudioOnly to { viewModel.setRadioAudioOnly(it) }),
                 )
                 SettingItem(
-                    title = stringResource(Res.string.sync_follow_to_youtube),
-                    subtitle = stringResource(Res.string.sync_follow_to_youtube_description),
-                    smallSubtitle = true,
-                    switch = (syncFollowToYouTube to { viewModel.setSyncFollowToYouTube(it) }),
-                    // Writing to someone's YouTube account needs a session, so the row is dead
-                    // while signed out. Clearing the stored flag is NOT done from here: the reset
-                    // belongs to the logout itself (SettingsViewModel.setUsedAccount /
-                    // logOutAllYouTube), which runs whether or not Settings is ever opened.
-                    isEnable = loggedIn == DataStoreManager.TRUE,
-                )
-                SettingItem(
-                    title = stringResource(Res.string.send_back_listening_data_to_google),
-                    subtitle =
-                        stringResource(
-                            Res.string
-                                .upload_your_listening_history_to_youtube_music_server_it_will_make_yt_music_recommendation_system_better_working_only_if_logged_in,
-                        ),
-                    smallSubtitle = true,
-                    switch = (sendData to { viewModel.setSendBackToGoogle(it) }),
-                )
-                SettingItem(
                     title = stringResource(Res.string.play_explicit_content),
                     subtitle = stringResource(Res.string.play_explicit_content_description),
                     switch = (explicitContentEnabled to { viewModel.setExplicitContentEnabled(it) }),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.keep_your_youtube_playlist_offline),
-                    subtitle = stringResource(Res.string.keep_your_youtube_playlist_offline_description),
-                    switch = (keepYoutubePlaylistOffline to { viewModel.setKeepYouTubePlaylistOffline(it) }),
                 )
                 /*
                 SettingItem(

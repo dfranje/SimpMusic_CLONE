@@ -546,7 +546,7 @@ internal class DataStoreManagerImpl(
 
     override val radioAudioOnly =
         settingsDataStore.data.map { preferences ->
-            preferences[RADIO_AUDIO_ONLY] ?: FALSE
+            preferences[RADIO_AUDIO_ONLY] ?: TRUE
         }
 
     override suspend fun setRadioAudioOnly(audioOnly: Boolean) {
@@ -1426,7 +1426,7 @@ internal class DataStoreManagerImpl(
 
     override val crossfadeEnabled: Flow<String> =
         settingsDataStore.data.map { preferences ->
-            preferences[CROSSFADE_ENABLED] ?: FALSE
+            preferences[CROSSFADE_ENABLED] ?: TRUE
         }
 
     override suspend fun setCrossfadeEnabled(enabled: Boolean) {
@@ -1445,7 +1445,7 @@ internal class DataStoreManagerImpl(
 
     override val crossfadeDuration: Flow<Int> =
         settingsDataStore.data.map { preferences ->
-            preferences[CROSSFADE_DURATION] ?: 5000
+            preferences[CROSSFADE_DURATION] ?: 8000
         }
 
     override suspend fun setCrossfadeDuration(duration: Int) {
@@ -1494,46 +1494,6 @@ internal class DataStoreManagerImpl(
         withContext(Dispatchers.IO) {
             settingsDataStore.edit { settings ->
                 settings[AUTO_DOWNLOAD_LIKED_SONGS] = if (enabled) TRUE else FALSE
-            }
-        }
-    }
-
-    // Defaults to FALSE for the same reason as autoDownloadLikedSongs.
-    override val smartDownloadsEnabled: Flow<String> =
-        settingsDataStore.data.map { preferences ->
-            preferences[SMART_DOWNLOADS_ENABLED] ?: FALSE
-        }
-
-    override suspend fun setSmartDownloadsEnabled(enabled: Boolean) {
-        withContext(Dispatchers.IO) {
-            settingsDataStore.edit { settings ->
-                settings[SMART_DOWNLOADS_ENABLED] = if (enabled) TRUE else FALSE
-            }
-        }
-    }
-
-    override val smartDownloadsCount: Flow<Int> =
-        settingsDataStore.data.map { preferences ->
-            preferences[SMART_DOWNLOADS_COUNT] ?: 50
-        }
-
-    override suspend fun setSmartDownloadsCount(count: Int) {
-        withContext(Dispatchers.IO) {
-            settingsDataStore.edit { settings ->
-                settings[SMART_DOWNLOADS_COUNT] = count
-            }
-        }
-    }
-
-    override val smartDownloadsLastRun: Flow<Long> =
-        settingsDataStore.data.map { preferences ->
-            preferences[SMART_DOWNLOADS_LAST_RUN] ?: 0L
-        }
-
-    override suspend fun setSmartDownloadsLastRun(time: Long) {
-        withContext(Dispatchers.IO) {
-            settingsDataStore.edit { settings ->
-                settings[SMART_DOWNLOADS_LAST_RUN] = time
             }
         }
     }
@@ -1745,7 +1705,7 @@ internal class DataStoreManagerImpl(
 
     override val localTrackingEnabled: Flow<String> =
         settingsDataStore.data.map { preferences ->
-            preferences[LOCAL_TRACKING_ENABLED] ?: FALSE
+            preferences[LOCAL_TRACKING_ENABLED] ?: TRUE
         }
 
     override suspend fun setLocalTrackingEnabled(enabled: Boolean) {
@@ -1853,9 +1813,6 @@ internal class DataStoreManagerImpl(
         val CROSSFADE_DJ_MODE = stringPreferencesKey("crossfade_dj_mode")
         val CROSSFADE_SKIP_ALBUM = stringPreferencesKey("crossfade_skip_album")
         val AUTO_DOWNLOAD_LIKED_SONGS = stringPreferencesKey("auto_download_liked_songs")
-        val SMART_DOWNLOADS_ENABLED = stringPreferencesKey("smart_downloads_enabled")
-        val SMART_DOWNLOADS_COUNT = intPreferencesKey("smart_downloads_count")
-        val SMART_DOWNLOADS_LAST_RUN = longPreferencesKey("smart_downloads_last_run")
         val LYRICS_PROVIDER = stringPreferencesKey("lyrics_provider")
         val TRANSLATION_LANGUAGE = stringPreferencesKey("translation_language")
         val USE_TRANSLATION_LANGUAGE = stringPreferencesKey("use_translation_language")

@@ -18,7 +18,6 @@ import com.maxrave.domain.extension.toNetScapeString
 import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.domain.mediaservice.handler.DownloadHandler
 import com.maxrave.domain.repository.AccountRepository
-import com.maxrave.domain.repository.ArtistRepository
 import com.maxrave.domain.repository.CacheRepository
 import com.maxrave.domain.repository.CommonRepository
 import com.maxrave.domain.repository.LyricsRomanizerRepository
@@ -27,7 +26,6 @@ import com.maxrave.domain.utils.LocalResource
 import com.maxrave.logger.LogLevel
 import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.Platform
-import com.maxrave.simpmusic.expect.isOnUnmeteredNetwork
 import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.viewModel.base.BaseViewModel
 import kotlinx.coroutines.Dispatchers
@@ -59,16 +57,12 @@ import simpmusic.composeapp.generated.resources.clear_downloaded_cache
 import simpmusic.composeapp.generated.resources.clear_listening_history_done
 import simpmusic.composeapp.generated.resources.clear_player_cache
 import simpmusic.composeapp.generated.resources.clear_thumbnail_cache
-import simpmusic.composeapp.generated.resources.downloading_liked_songs
 import simpmusic.composeapp.generated.resources.error
 import simpmusic.composeapp.generated.resources.log_out_confirm_message
 import simpmusic.composeapp.generated.resources.restore_failed
 import simpmusic.composeapp.generated.resources.restore_in_progress
-import simpmusic.composeapp.generated.resources.smart_downloads_downloading
-import simpmusic.composeapp.generated.resources.smart_downloads_waiting_for_wifi
 import simpmusic.composeapp.generated.resources.warning
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.time.Clock
 
 class SettingsViewModel(
     private val dataStoreManager: DataStoreManager,
@@ -76,7 +70,6 @@ class SettingsViewModel(
     private val songRepository: SongRepository,
     private val accountRepository: AccountRepository,
     private val cacheRepository: CacheRepository,
-    private val artistRepository: ArtistRepository,
     private val lyricsRomanizerRepository: LyricsRomanizerRepository,
 ) : BaseViewModel() {
     private val downloadUtils: DownloadHandler by inject()
@@ -106,8 +99,6 @@ class SettingsViewModel(
     private var _sponsorBlockCategories: MutableStateFlow<ArrayList<String>?> =
         MutableStateFlow(null)
     val sponsorBlockCategories: StateFlow<ArrayList<String>?> = _sponsorBlockCategories
-    private var _sendBackToGoogle: MutableStateFlow<String?> = MutableStateFlow(null)
-    val sendBackToGoogle: StateFlow<String?> = _sendBackToGoogle
     private var _mainLyricsProvider: MutableStateFlow<String?> = MutableStateFlow(null)
     val mainLyricsProvider: StateFlow<String?> = _mainLyricsProvider
 
@@ -156,20 +147,14 @@ class SettingsViewModel(
     val customOpenAIBaseUrl: StateFlow<String> = _customOpenAIBaseUrl
     private val _customOpenAIHeaders = MutableStateFlow<String>("")
     val customOpenAIHeaders: StateFlow<String> = _customOpenAIHeaders
-    private val _crossfadeEnabled = MutableStateFlow<Boolean>(false)
+    private val _crossfadeEnabled = MutableStateFlow<Boolean>(true)
     val crossfadeEnabled: StateFlow<Boolean> = _crossfadeEnabled
-    private val _crossfadeDuration = MutableStateFlow<Int>(5000)
+    private val _crossfadeDuration = MutableStateFlow<Int>(8000)
     val crossfadeDuration: StateFlow<Int> = _crossfadeDuration
     private val _crossfadeDjMode = MutableStateFlow<Boolean>(true)
     val crossfadeDjMode: StateFlow<Boolean> = _crossfadeDjMode
     private val _crossfadeSkipAlbum = MutableStateFlow<Boolean>(false)
     val crossfadeSkipAlbum: StateFlow<Boolean> = _crossfadeSkipAlbum
-    private val _autoDownloadLikedSongs = MutableStateFlow<Boolean>(false)
-    val autoDownloadLikedSongs: StateFlow<Boolean> = _autoDownloadLikedSongs
-    private val _smartDownloadsEnabled = MutableStateFlow<Boolean>(false)
-    val smartDownloadsEnabled: StateFlow<Boolean> = _smartDownloadsEnabled
-    private val _smartDownloadsCount = MutableStateFlow<Int>(50)
-    val smartDownloadsCount: StateFlow<Int> = _smartDownloadsCount
     private val _youtubeSubtitleLanguage = MutableStateFlow<String>("")
     val youtubeSubtitleLanguage: StateFlow<String> = _youtubeSubtitleLanguage
     private val _lyricsOffsetMs = MutableStateFlow<Int>(0)
@@ -211,9 +196,6 @@ class SettingsViewModel(
     private val _lastfmScrobbleEnabled = MutableStateFlow(false)
     val lastfmScrobbleEnabled: StateFlow<Boolean> = _lastfmScrobbleEnabled
 
-    private val _keepYouTubePlaylistOffline = MutableStateFlow<Boolean>(false)
-    val keepYouTubePlaylistOffline: StateFlow<Boolean> = _keepYouTubePlaylistOffline
-
     private val _combineLocalAndYouTubeLiked = MutableStateFlow<Boolean>(false)
     val combineLocalAndYouTubeLiked: StateFlow<Boolean> = _combineLocalAndYouTubeLiked
 
@@ -223,7 +205,7 @@ class SettingsViewModel(
     private val _videoDownloadQuality = MutableStateFlow<String?>(null)
     val videoDownloadQuality: StateFlow<String?> = _videoDownloadQuality
 
-    private val _localTrackingEnabled = MutableStateFlow<Boolean>(false)
+    private val _localTrackingEnabled = MutableStateFlow<Boolean>(true)
     val localTrackingEnabled: StateFlow<Boolean> = _localTrackingEnabled
 
     private val _blogNotificationEnabled = MutableStateFlow(true)
@@ -285,7 +267,6 @@ class SettingsViewModel(
         getNormalizeVolume()
         getSkipSilent()
         getSavedPlaybackState()
-        getSendBackToGoogle()
         getLastCheckForUpdate()
         getSponsorBlockEnabled()
         getSponsorBlockCategories()
@@ -299,7 +280,6 @@ class SettingsViewModel(
         getVideoQuality()
         getSpotifyLogIn()
         getSpotifyLyrics()
-        getSyncFollowToYouTube()
         getEqualizer()
         getAudioEffects()
         getSpotifyCanvas()
@@ -318,8 +298,6 @@ class SettingsViewModel(
         getCrossfadeDuration()
         getCrossfadeDjMode()
         getCrossfadeSkipAlbum()
-        getAutoDownloadLikedSongs()
-        getSmartDownloads()
         getContributorNameAndEmail()
         getBackupDownloaded()
         getUpdateChannel()
@@ -329,7 +307,6 @@ class SettingsViewModel(
         getDiscordRichPresenceEnabled()
         getLastfmSession()
         getLastfmScrobbleEnabled()
-        getKeepYouTubePlaylistOffline()
         getCombineLocalAndYouTubeLiked()
         getDownloadQuality()
         getVideoDownloadQuality()
@@ -414,21 +391,6 @@ class SettingsViewModel(
         }
     }
 
-    private fun getKeepYouTubePlaylistOffline() {
-        viewModelScope.launch {
-            dataStoreManager.keepYouTubePlaylistOffline.collect { keep ->
-                _keepYouTubePlaylistOffline.value = keep == DataStoreManager.TRUE
-            }
-        }
-    }
-
-    fun setKeepYouTubePlaylistOffline(keep: Boolean) {
-        viewModelScope.launch {
-            dataStoreManager.setKeepYouTubePlaylistOffline(keep)
-            getKeepYouTubePlaylistOffline()
-        }
-    }
-
     private fun getCombineLocalAndYouTubeLiked() {
         viewModelScope.launch {
             dataStoreManager.combineLocalAndYouTubeLiked.collect { combine ->
@@ -504,71 +466,6 @@ class SettingsViewModel(
             // the life of the ViewModel, one more per toggle.
             dataStoreManager.setCrossfadeSkipAlbum(enabled)
         }
-    }
-
-    private fun getAutoDownloadLikedSongs() {
-        viewModelScope.launch {
-            dataStoreManager.autoDownloadLikedSongs.collect { enabled ->
-                _autoDownloadLikedSongs.value = enabled == DataStoreManager.TRUE
-            }
-        }
-    }
-
-    fun setAutoDownloadLikedSongs(enabled: Boolean) {
-        viewModelScope.launch {
-            dataStoreManager.setAutoDownloadLikedSongs(enabled)
-            // Switching it on also catches up on everything liked before now. Songs already
-            // downloaded are skipped, so toggling it off and on again queues nothing.
-            if (enabled) {
-                val queued = songRepository.downloadAllLikedSongs()
-                if (queued > 0) {
-                    // Not BaseViewModel.getString: that one takes no format arguments and would
-                    // leave the placeholder in the text.
-                    makeToast(formatString(Res.string.downloading_liked_songs, queued))
-                }
-            }
-        }
-    }
-
-    private fun getSmartDownloads() {
-        viewModelScope.launch {
-            dataStoreManager.smartDownloadsEnabled.collect { enabled ->
-                _smartDownloadsEnabled.value = enabled == DataStoreManager.TRUE
-            }
-        }
-        viewModelScope.launch {
-            dataStoreManager.smartDownloadsCount.collect { count ->
-                _smartDownloadsCount.value = count
-            }
-        }
-    }
-
-    fun setSmartDownloadsEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            dataStoreManager.setSmartDownloadsEnabled(enabled)
-            if (enabled) runSmartDownloadsNow() else songRepository.clearSmartDownloads()
-        }
-    }
-
-    fun setSmartDownloadsCount(count: Int) {
-        viewModelScope.launch {
-            dataStoreManager.setSmartDownloadsCount(count)
-            if (dataStoreManager.smartDownloadsEnabled.first() == DataStoreManager.TRUE) runSmartDownloadsNow()
-        }
-    }
-
-    /** A change made here runs a pass at once. Off an unmetered network it waits for the next app open instead. */
-    private suspend fun runSmartDownloadsNow() {
-        if (dataStoreManager.localTrackingEnabled.first() != DataStoreManager.TRUE) return
-        if (!isOnUnmeteredNetwork()) {
-            // Zero lets the next app open on Wi-Fi run the pass straight away, not a day later.
-            dataStoreManager.setSmartDownloadsLastRun(0)
-            makeToast(getString(Res.string.smart_downloads_waiting_for_wifi))
-            return
-        }
-        dataStoreManager.setSmartDownloadsLastRun(Clock.System.now().toEpochMilliseconds())
-        val queued = songRepository.runSmartDownloads(dataStoreManager.smartDownloadsCount.first())
-        if (queued > 0) makeToast(formatString(Res.string.smart_downloads_downloading, queued))
     }
 
     private fun getDiscordLoggedIn() {
@@ -1317,21 +1214,6 @@ class SettingsViewModel(
         }
     }
 
-    fun getSendBackToGoogle() {
-        viewModelScope.launch {
-            dataStoreManager.sendBackToGoogle.collect { sendBackToGoogle ->
-                _sendBackToGoogle.emit(sendBackToGoogle)
-            }
-        }
-    }
-
-    fun setSendBackToGoogle(sendBackToGoogle: Boolean) {
-        viewModelScope.launch {
-            dataStoreManager.setSendBackToGoogle(sendBackToGoogle)
-            getSendBackToGoogle()
-        }
-    }
-
     fun getSkipSilent() {
         viewModelScope.launch {
             dataStoreManager.skipSilent.collect { skipSilent ->
@@ -1840,33 +1722,6 @@ class SettingsViewModel(
 
     fun setReverbMix(mix: Float) {
         viewModelScope.launch { dataStoreManager.setReverbMix(mix) }
-    }
-
-    private var _syncFollowToYouTube: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val syncFollowToYouTube: StateFlow<Boolean> = _syncFollowToYouTube
-
-    fun getSyncFollowToYouTube() {
-        viewModelScope.launch {
-            dataStoreManager.syncFollowToYouTube.collect {
-                _syncFollowToYouTube.emit(it == DataStoreManager.TRUE)
-            }
-        }
-    }
-
-    fun setSyncFollowToYouTube(enabled: Boolean) {
-        viewModelScope.launch {
-            dataStoreManager.setSyncFollowToYouTube(enabled)
-            // Turning it on is a statement about the whole library: artists followed before the
-            // switch would otherwise never reach the account. Turning it off deliberately does
-            // NOT unsubscribe — stopping the mirroring is not the same as asking us to undo it.
-            if (enabled) {
-                // Runs silently. The only toast in this feature belongs to the Follow button on
-                // the artist screen, where the user performed the action and is waiting to see it
-                // take effect; a switch in Settings is not the place to report on a background
-                // sweep the user is not watching.
-                artistRepository.syncFollowedArtistsToYouTube().collect { }
-            }
-        }
     }
 
     private var _spotifyLyrics: MutableStateFlow<Boolean> = MutableStateFlow(false)

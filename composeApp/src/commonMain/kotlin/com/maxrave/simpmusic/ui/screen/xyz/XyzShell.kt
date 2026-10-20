@@ -86,14 +86,14 @@ private val XyzNavItems =
 
 private fun NavDestination?.isOn(item: XyzNavItem): Boolean = this?.hierarchy?.any { it.hasRoute(item.route) } == true
 
-/** Opens a sidebar page the way the stock tabs do: one copy of each, its scroll and state kept. */
+/**
+ * Opens a sidebar page at its start: everything above Home is dropped and not saved, so Artists comes
+ * back as the search page, never as the artist page it was left on, and its search starts empty.
+ */
 fun NavController.navigateXyzPage(destination: Any) {
     navigate(destination) {
-        popUpTo(graph.startDestinationId) {
-            saveState = true
-        }
+        popUpTo(graph.startDestinationId)
         launchSingleTop = true
-        restoreState = true
     }
 }
 

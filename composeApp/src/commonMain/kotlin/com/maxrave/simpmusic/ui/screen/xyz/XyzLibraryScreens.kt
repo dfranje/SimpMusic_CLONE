@@ -33,6 +33,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -105,8 +107,9 @@ internal fun pagePadding(innerPadding: PaddingValues): PaddingValues {
 
 /**
  * What the search pill holds. [submitted] is what the results on screen answer; blank means "show the
- * page's own list". Plain state, deliberately not saveable: leaving the page (picking a song lands on
- * Home) drops the old search, so coming back starts with an empty pill.
+ * page's own list". Saved with the page's back stack entry, so Back from an artist page brings the
+ * results back. Picking a song (which lands on Home) and opening the page from the sidebar both drop
+ * that entry without saving it ([navigateXyzPage]), so the page then starts with an empty pill.
  */
 @Stable
 private class SearchText(
@@ -139,7 +142,19 @@ private class SearchText(
 @Composable
 private fun rememberSearchText(search: (String) -> Unit): SearchText {
     val latestSearch by rememberUpdatedState(search)
-    val state = remember { SearchText { latestSearch } }
+    val state =
+        rememberSaveable(
+            saver =
+                listSaver(
+                    save = { listOf(it.query, it.submitted) },
+                    restore = { saved ->
+                        SearchText { latestSearch }.apply {
+                            query = saved[0]
+                            submitted = saved[1]
+                        }
+                    },
+                ),
+        ) { SearchText { latestSearch } }
     LaunchedEffect(state.query) {
         val query = state.query
         if (query.isBlank()) {

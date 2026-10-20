@@ -49,6 +49,9 @@ const val XYZ_ACCENT_FOLLOW = "follow"
 /** Set once the light build's defaults (see SharedViewModel.applyXyzLightDefaultsOnce) were applied. */
 const val XYZ_LIGHT_DEFAULTS_KEY = "xyz_light_defaults_v1"
 
+/** Set once the second round of defaults (see SharedViewModel.applyXyzDefaultsV2Once) were applied. */
+const val XYZ_DEFAULTS_V2_KEY = "xyz_defaults_v2"
+
 /** One launcher palette: [accent] is the main colour, [deep] its darker end, [accent2] the second colour. */
 @Immutable
 class XyzAccent(
